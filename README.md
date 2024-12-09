@@ -2,7 +2,7 @@
 
 ## Overview
 
-This R package implements a parameterized Fast Reciprocal Square Root (FRSR) algorithm, also known as Fast Inverse Square Root (FISR), written in C++. 
+This R package implements a parameterized Fast Reciprocal Square Root (FRSR) algorithm, also known as Fast Inverse Square Root (FISR), written in C++. You can read more about the FRSR at [0x5f37642f.com](https://0x5f37642f.com/) or see reasons why you might find instrumenting the output fun at [FastInverseSqrt-Visualized on GitHub](https://github.com/hyland-uw/FastInverseSqrt-Visualized).
 
 ## Features
 
@@ -12,7 +12,7 @@ This R package implements a parameterized Fast Reciprocal Square Root (FRSR) alg
 
 ## Installation
 
-You can install the package from GitHub using the `devtools` package:
+Install the package from GitHub using the `devtools` package:
 
 ```R
 # install.packages("devtools")
