@@ -2,9 +2,12 @@ Package: frsrr
 Type: Package
 Title: A Customizable Fast Reciprocal Square Root
 Version: 0.1.0
-Author: Adam Hyland
-Maintainer: Adam Hyland <0x5f37642f@protonmail.com>
+Authors@R: person(given = "Adam",
+                  family = "Hyland",
+                  role = c("aut", "cre"),
+                  email = "0x5f37642f@protonmail.com")
 Description: Allows the user to vary parameters and test performance of the Fast Reciprocal Square Root, more famously known as the Fast Inverse Square Root.
+URL: https://github.com/Protonk/frsrr
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

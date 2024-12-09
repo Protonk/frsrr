@@ -23,6 +23,10 @@ using namespace Rcpp;
 //'   \item{diff}{Difference between final and penultimate approximations}
 //'   \item{iters}{Number of iterations performed}
 //'
+//' \code{frsr_minimal} returns a numeric vector of the same length as \code{x}, 
+//' containing the final approximations of 1/sqrt(x).
+//'
+//'
 //' @details
 //' The function supplies a Fast Reciprocal Square Root algorithm, which provides
 //' an approximation of 1/sqrt(x). The user can specify their own parameters. The
@@ -53,7 +57,7 @@ using namespace Rcpp;
 //' if B =/= A - 1, the approximation may fail to converge.
 //'
 //' @references
-//' J. F. Blinn, "Floating-point tricks," in IEEE Computer Graphics and Applications, vol. 17, no. 4, pp. 80-84, July-Aug. 1997 \url{https://doi.org/10.1109/38.595279}
+//' J. F. Blinn, "Floating-point tricks," in IEEE Computer Graphics and Applications, vol. 17, no. 4, pp. 80-84, July-Aug. 1997 \doi{10.1109/38.595279}
 //'
 //' A. C. Hyland. "Fast inverse square root" \url{https://0x5f37642f.com/}
 //'
@@ -66,8 +70,11 @@ using namespace Rcpp;
 //'
 //' Blinn <- frsr(runif(256, 0.25, 1), magic = 0x5F400000, A = 1.47, B = 0.47)
 //' with(Blinn, plot(input, error, pch = 16))
+//' minimal_result <- frsr_minimal(c(pi, 2^-31, 0.4, 6.02e23))
+//' print(minimal_result)
 //' }
 //'
+//' @rdname frsr
 //' @export
 // [[Rcpp::export]]
 DataFrame frsr(NumericVector x, uint32_t magic = 0x5f3759df, int NR = 1, float A = 1.5, float B = 0.5, float tol = 0) {
@@ -132,4 +139,38 @@ DataFrame frsr(NumericVector x, uint32_t magic = 0x5f3759df, int NR = 1, float A
     _["diff"] = diff,
     _["iters"] = iters_vec
   );
+}
+//' @rdname frsr
+//' @export
+// [[Rcpp::export]]
+NumericVector frsr_minimal(NumericVector x, uint32_t magic = 0x5f3759df, int NR = 1, float A = 1.5, float B = 0.5, float tol = 0) {
+  int n = x.size();
+  NumericVector result(n);
+
+  for (int j = 0; j < n; ++j) {
+    float x_val = x[j];
+    float y = x_val;
+    union {
+      float f;
+      uint32_t u;
+    } conv = {x_val};
+    
+    conv.u = magic - (conv.u >> 1);
+    y = conv.f;
+
+    for (int i = 0; i < NR; ++i) {
+      y = y * (A - B * x_val * y * y);
+      
+      if (tol > 0) {
+        float rel_error = std::abs(y - 1 / std::sqrt(x_val)) / (1 / std::sqrt(x_val));
+        if (rel_error <= tol && i >= 0) {
+          break;
+        }
+      }
+    }
+    
+    result[j] = y;
+  }
+
+  return result;
 }

@@ -31,6 +31,22 @@ test_that("frsr produces accurate results with tolerance parameter", {
   expect_equal(result$final[1], 1/sqrt(4), tolerance = 1e-6)
 })
 
-
+test_that("frsr.minimal returns a numeric vector", {
+  # Test with a single value
+  result_single <- frsr_minimal(4)
+  expect_type(result_single, "double")
+  expect_length(result_single, 1)
+  
+  # Test with multiple values
+  input_vector <- c(1, 4, 9, 16)
+  result_multiple <- frsr_minimal(input_vector)
+  expect_type(result_multiple, "double")
+  expect_length(result_multiple, length(input_vector))
+  
+  # Check that the output is indeed a vector and not a list or data frame
+  expect_true(is.vector(result_multiple))
+  expect_false(is.list(result_multiple))
+  expect_false(is.data.frame(result_multiple))
+})
 
 
