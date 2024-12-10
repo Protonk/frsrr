@@ -1,4 +1,4 @@
-# Fast Inverse Square Root (FRSR) R Package
+# Fast Reciprocal Square Root R Package, frsrr
 
 ## Overview
 
@@ -13,7 +13,7 @@ I like R! R doesn't have a type for 32 bit floats, so I wanted a way to mess wit
 - Customizable parameters for fine-tuning accuracy and performance (or the reverse)
 - Supports vectorized input
 - C++ implementation for speed.
-- Optionally provides detailed output including initial approximation, intermediate steps, and error metrics
+- Optional detailed output including initial approximation, intermediate steps, and error metrics
 
 ## Installation
 
@@ -44,5 +44,4 @@ print(result)
 # 2 4.656613e-10 1597463007 4.693787e+04 4.632937e+04 4.632937e+04 0.0002499308 -6.085039e+02     1
 # 3 4.000000e-01 1597463007 1.632430e+00 1.578616e+00 1.578616e+00 0.0015955754 -5.381417e-02     1
 # 4 6.020000e+23 1597463007 1.306493e-12 1.288484e-12 1.288484e-12 0.0002824810 -1.800936e-14     1
-
 ```

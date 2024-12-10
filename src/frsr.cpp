@@ -4,18 +4,18 @@
 using namespace Rcpp;
 //' Fast Reciprocal Square Root (FRSR)
 //'
-//' This function supplies a parameterized Fast Reciprocal Square Root algorithm written in C++.
+//' A parameterized Fast Reciprocal Square Root algorithm written in C++.
 //'
 //' @param x A numeric vector of input values.
 //' @param magic An unsigned 32-bit integer restoring constant. Default is 0x5f3759df.
 //' @param NR An integer specifying the maximum number of Newton-Raphson iterations. Default is 1.
-//' @param A First float parameter for the Newton-Raphson iteration. Default is 1.5.
-//' @param B Second float parameter for the Newton-Raphson iteration. Default is 0.5.
-//' @param tol A float specifying the absolute relative error at which to stop early. Default is 0 (no early stopping).
+//' @param A Parameter for the Newton-Raphson iteration. Default is \code{1.5}.
+//' @param B Parameter for the Newton-Raphson iteration. Default is \code{0.5}.
+//' @param tol The absolute relative error at which to stop early. Default is 0 (no early stopping).
 //'
 //' @return 
 //' \code{frsr} returns a numeric vector of the same length as \code{x},
-//' containing the \code{final} approximations of \eqn{1/sqrt(x)}.
+//' containing the \code{final} approximations of 1/sqrt(x).
 //'
 //' \code{frsr.detail} returns a data frame with columns:
 //'     \item{input}{The input values}
@@ -57,21 +57,29 @@ using namespace Rcpp;
 //' if B =/= A - 1, the approximation may fail to converge.
 //'
 //' @references
-//' J. F. Blinn, "Floating-point tricks," in IEEE Computer Graphics and Applications, vol. 17, no. 4, pp. 80-84, July-Aug. 1997 \doi{10.1109/38.595279}
+//' J. F. Blinn, (July-Aug. 1997) "Floating-point tricks," in IEEE Computer Graphics and Applications, vol. 17, no. 4, pp. 80-84 \doi{10.1109/38.595279}
 //'
+//' J. T. Coonen, (1984) §2.3 "A Poor Man's Logarithm" in Contributions to a Proposed Standard for Binary Floating-Point Arithmetic. PhD Thesis, University of California Berkeley
 //'
-//' S. Summit. (2023). Answer to "Why does the integer representation of a floating point number offer a piecewise linear approximation to the logarithm?" Stack Overflow. \url{https://stackoverflow.com/a/75772363/1188479}
+//' S. Summit, (2023). Answer to "Why does the integer representation of a floating point number offer a piecewise linear approximation to the logarithm?" Stack Overflow. \url{https://stackoverflow.com/a/75772363/1188479}
 //'
 //' @examples
 //' \dontrun{
-//' vector_result <- frsr(c(pi, 2^-31, 0.4, 6.02e23))
-//' ## A numeric vector of length 3
-//' print(vector_result)
+//' # Custom parameters
+//' result <- frsr(c(1, 4, 9, 16), magic = 0x5f375a86, NR = 2, A = 1.6, B = 0.6)
+//' ## result is a vector of length 4
+//' print(result)
+//' # [1] 0.9990148 0.4995074 0.3337626 0.2497537
 //'
-//' ## Blinn 1997 showed the results with a pure restoring constant.
-//' Blinn <- frsr(runif(256, 0.25, 1), magic = 0x5F400000, A = 1.47, B = 0.47)
-//' ## Blinn is a dataframe with 256 rows, suitable for plotting
-//' with(Blinn, plot(input, error, pch = 16))
+//' # Optional detail
+//' result.df <- frsr.detail(c(pi, 2^-31, 0.4, 6.02e23))
+//' ## result.df is a dataframe with 3 rows and 8 columns
+//' print(result.df)
+//' #          input      magic      initial    after_one        final        error          diff iters
+//' # 1 3.141593e+00 1597463007 5.735160e-01 5.639570e-01 5.639570e-01 0.0004121269 -9.558976e-03     1
+//' # 2 4.656613e-10 1597463007 4.693787e+04 4.632937e+04 4.632937e+04 0.0002499308 -6.085039e+02     1
+//' # 3 4.000000e-01 1597463007 1.632430e+00 1.578616e+00 1.578616e+00 0.0015955754 -5.381417e-02     1
+//' # 4 6.020000e+23 1597463007 1.306493e-12 1.288484e-12 1.288484e-12 0.0002824810 -1.800936e-14     1
 //' }
 //'
 // [[Rcpp::export]]
