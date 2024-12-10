@@ -27,7 +27,7 @@ devtools::install_github("Protonk/frsrr")
 ### Usage
 
 ```R
-library(frsr)
+library(frsrr)
 
 # Custom parameters
 result <- frsr(c(1, 4, 9, 16), magic = 0x5f375a86, NR = 2, A = 1.6, B = 0.6)
