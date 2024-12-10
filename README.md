@@ -37,7 +37,7 @@ print(result)
 
 # Optional detail
 result.df <- frsr.detail(c(pi, 2^-31, 0.4, 6.02e23))
-## result.df is a dataframe with 3 rows and 8 columns
+## result.df is a dataframe with 4 rows and 8 columns
 print(result)
 #          input      magic      initial    after_one        final        error          diff iters
 # 1 3.141593e+00 1597463007 5.735160e-01 5.639570e-01 5.639570e-01 0.0004121269 -9.558976e-03     1

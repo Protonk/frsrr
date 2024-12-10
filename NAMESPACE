@@ -3,4 +3,5 @@
 export(frsr)
 export(frsr.detail)
 importFrom(Rcpp,sourceCpp)
+importFrom(RcppParallel,RcppParallelLibs)
 useDynLib(frsrr, .registration = TRUE)
