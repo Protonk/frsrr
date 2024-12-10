@@ -139,14 +139,13 @@ NumericVector frsr(NumericVector x, uint32_t magic = 0x5f3759df, int NR = 1, flo
 DataFrame frsr_detail(NumericVector x, uint32_t magic = 0x5f3759df, int NR = 1, float A = 1.5, float B = 0.5, float tol = 0) {
   int n = x.size();
   NumericVector initial(n), after_one(n), final(n), error(n), diff(n);
-  IntegerVector magic_vec(n, magic), iters_vec(n);
+  IntegerVector iters_vec(n);
 
   FRSRDetailWorker frsrDetailWorker(x, magic, NR, A, B, tol, initial, after_one, final, error, diff, iters_vec);
   parallelFor(0, n, frsrDetailWorker);
 
   return DataFrame::create(
     _["input"] = x,
-    _["magic"] = magic_vec,
     _["initial"] = initial,
     _["after_one"] = after_one,
     _["final"] = final,

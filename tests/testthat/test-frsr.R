@@ -1,7 +1,7 @@
 test_that("frsr detail produces expected output structure", {
   result <- frsr.detail(c(1, 4, 9))
   expect_s3_class(result, "data.frame")
-  expect_named(result, c("input", "magic", "initial", "after_one", "final", "error", "diff", "iters"))
+  expect_named(result, c("input", "initial", "after_one", "final", "error", "diff", "iters"))
   expect_equal(nrow(result), 3)
   # frsr
   result.vec <- frsr(c(1, 4, 9))
