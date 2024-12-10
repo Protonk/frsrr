@@ -13,19 +13,19 @@ using namespace Rcpp;
 //' @param B Second float parameter for the Newton-Raphson iteration. Default is 0.5.
 //' @param tol A float specifying the absolute relative error at which to stop early. Default is 0 (no early stopping).
 //'
-//' @return A data frame with columns:
-//'   \item{input}{The input values}
-//'   \item{magic}{The integer restoring constant chosen}
-//'   \item{initial}{Initial approximation from integer operations}
-//'   \item{after_one}{Result after one iteration of Newton-Raphson}
-//'   \item{final}{Result from final iteration}
-//'   \item{error}{Absolute relative error of final versus standard library}
-//'   \item{diff}{Difference between final and penultimate approximations}
-//'   \item{iters}{Number of iterations performed}
+//' @return 
+//' \code{frsr} returns a numeric vector of the same length as \code{x},
+//' containing the \code{final} approximations of \eqn{1/sqrt(x)}.
 //'
-//' \code{frsr_minimal} returns a numeric vector of the same length as \code{x}, 
-//' containing the final approximations of 1/sqrt(x).
-//'
+//' \code{frsr.detail} returns a data frame with columns:
+//'     \item{input}{The input values}
+//'     \item{magic}{The integer restoring constant chosen}
+//'     \item{initial}{Initial approximation from integer operations}
+//'     \item{after_one}{Result after one iteration of Newton-Raphson}
+//'     \item{final}{Result from final iteration}
+//'     \item{error}{Absolute relative error of final versus standard library}
+//'     \item{diff}{Difference between final and penultimate approximations}
+//'     \item{iters}{Number of iterations performed}
 //'
 //' @details
 //' The function supplies a Fast Reciprocal Square Root algorithm, which provides
@@ -65,19 +65,49 @@ using namespace Rcpp;
 //'
 //' @examples
 //' \dontrun{
-//' result <- frsr(c(pi, 2^-31, 0.4, 6.02e23))
-//' print(result)
+//' vector_result <- frsr(c(pi, 2^-31, 0.4, 6.02e23))
+//' ## A numeric vector of length 3
+//' print(vector_result)
 //'
+//' ## Blinn 1997 showed the results with a pure restoring constant.
 //' Blinn <- frsr(runif(256, 0.25, 1), magic = 0x5F400000, A = 1.47, B = 0.47)
+//' ## Blinn is a dataframe with 256 rows, suitable for plotting
 //' with(Blinn, plot(input, error, pch = 16))
-//' minimal_result <- frsr_minimal(c(pi, 2^-31, 0.4, 6.02e23))
-//' print(minimal_result)
 //' }
 //'
-//' @rdname frsr
-//' @export
 // [[Rcpp::export]]
-DataFrame frsr(NumericVector x, uint32_t magic = 0x5f3759df, int NR = 1, float A = 1.5, float B = 0.5, float tol = 0) {
+NumericVector frsr(NumericVector x, uint32_t magic = 0x5f3759df, int NR = 1, float A = 1.5, float B = 0.5, float tol = 0) {
+    int n = x.size();
+    NumericVector result(n);
+
+    for (int j = 0; j < n; ++j) {
+        float x_val = x[j];
+        float reference = 1 / std::sqrt(x_val);
+        float rel_error = std::numeric_limits<float>::max();
+
+        union {
+            float f;
+            uint32_t u;
+        } y = {x_val};
+
+        y.u = static_cast<uint32_t>(magic) - (y.u >> 1);
+
+        for (int i = 1; i <= NR; i++) {
+            y.f = y.f * (A - B * x_val * y.f * y.f);
+            rel_error = std::abs(y.f - reference) / reference;
+
+            if (tol > 0 && rel_error <= tol && i >= 1) {
+                break;
+            }
+        }
+        
+        result[j] = y.f;
+    }
+
+    return result;
+}
+// [[Rcpp::export]]
+DataFrame frsr_detail(NumericVector x, uint32_t magic = 0x5f3759df, int NR = 1, float A = 1.5, float B = 0.5, float tol = 0) {
   int n = x.size();
   NumericVector input(n), initial(n), after_one(n), final(n), error(n), diff(n);
   IntegerVector magic_vec(n, magic), iters_vec(n);
@@ -139,38 +169,4 @@ DataFrame frsr(NumericVector x, uint32_t magic = 0x5f3759df, int NR = 1, float A
     _["diff"] = diff,
     _["iters"] = iters_vec
   );
-}
-//' @rdname frsr
-//' @export
-// [[Rcpp::export]]
-NumericVector frsr_minimal(NumericVector x, uint32_t magic = 0x5f3759df, int NR = 1, float A = 1.5, float B = 0.5, float tol = 0) {
-  int n = x.size();
-  NumericVector result(n);
-
-  for (int j = 0; j < n; ++j) {
-    float x_val = x[j];
-    float y = x_val;
-    union {
-      float f;
-      uint32_t u;
-    } conv = {x_val};
-    
-    conv.u = magic - (conv.u >> 1);
-    y = conv.f;
-
-    for (int i = 0; i < NR; ++i) {
-      y = y * (A - B * x_val * y * y);
-      
-      if (tol > 0) {
-        float rel_error = std::abs(y - 1 / std::sqrt(x_val)) / (1 / std::sqrt(x_val));
-        if (rel_error <= tol && i >= 0) {
-          break;
-        }
-      }
-    }
-    
-    result[j] = y;
-  }
-
-  return result;
 }
