@@ -59,7 +59,6 @@ using namespace Rcpp;
 //' @references
 //' J. F. Blinn, "Floating-point tricks," in IEEE Computer Graphics and Applications, vol. 17, no. 4, pp. 80-84, July-Aug. 1997 \doi{10.1109/38.595279}
 //'
-//' A. C. Hyland. "Fast inverse square root" \url{https://0x5f37642f.com/}
 //'
 //' S. Summit. (2023). Answer to "Why does the integer representation of a floating point number offer a piecewise linear approximation to the logarithm?" Stack Overflow. \url{https://stackoverflow.com/a/75772363/1188479}
 //'
