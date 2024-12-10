@@ -12,7 +12,7 @@ I like R! R doesn't have a type for 32 bit floats, so I wanted a way to mess wit
 
 - Customizable parameters for fine-tuning accuracy and performance (or the reverse)
 - Supports vectorized input
-- C++ implementation for speed.
+- C++ parallel implementation for speed so you can get the wrong answer faster.
 - Optional detailed output including initial approximation, intermediate steps, and error metrics
 
 ## Installation
