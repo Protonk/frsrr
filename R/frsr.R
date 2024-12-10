@@ -10,8 +10,8 @@ NULL
 #' @param x A numeric vector of input values.
 #' @param magic An unsigned 32-bit integer restoring constant. Default is 0x5f3759df.
 #' @param NR An integer specifying the maximum number of Newton-Raphson iterations. Default is 1.
-#' @param A Parameter for the Newton-Raphson iteration. Default is \code{1.5}.
-#' @param B Parameter for the Newton-Raphson iteration. Default is \code{0.5}.
+#' @param A Newton-Raphson parameter where \eqn{(A - B * x * y_n^2)}. Default is \code{1.5}.
+#' @param B Newton-Raphson parameter. Default is \code{0.5}.
 #' @param tol The absolute relative error at which to stop early. Default is 0 (no early stopping).
 #'
 #' @return 

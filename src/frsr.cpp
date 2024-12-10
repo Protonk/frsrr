@@ -83,6 +83,8 @@ struct FRSRDetailWorker : public Worker {
   void operator()(std::size_t begin, std::size_t end) {
     for (std::size_t j = begin; j < end; ++j) {
       float x_val = x[j];
+      // Tracking rate of convergence (for some values of the magic constant,
+      // this could be high)
       int actual_iters = 0;
       float reference = 1 / std::sqrt(x_val);
       float rel_error = std::numeric_limits<float>::max();
@@ -94,15 +96,20 @@ struct FRSRDetailWorker : public Worker {
 
       y.u = static_cast<uint32_t>(magic) - (y.u >> 1);
       initial[j] = y.f;
-
+      // so we always have a diff available (may be 0 if NR == 0)
       float prev_y = y.f;
 
       for (int i = 1; i <= NR; i++) {
         actual_iters++;
         y.f = y.f * (A - B * x_val * y.f * y.f);
+        // Compute relative error here so we can track it
+        // vis after the tolerance check for the main method
         rel_error = std::abs(y.f - reference) / reference;
 
         if (i == 1) {
+          // If you take more than 1 iteration to converge and
+          // you are modifying NR parameters, the first result
+          // can be instructive.
           after_one[j] = y.f;
         }
 
@@ -110,8 +117,12 @@ struct FRSRDetailWorker : public Worker {
           break;
         }
       }
+      // Rather than record all iterations, we get the final, first,
+      // and the difference bertween the final and the output
+      // of the last iteration. 
       diff[j] = y.f - prev_y;
       final[j] = y.f;
+      // Error is more useful to return than the reference value
       error[j] = rel_error;
       iters_vec[j] = actual_iters;
     }
