@@ -10,3 +10,4 @@ src/RcppExports.o
 man/frsr.Rd
 R/RcppExports.R
 src/RcppExports.cpp
+.vscode/settings.json

@@ -2,6 +2,7 @@
 
 export(frsr)
 export(frsr.detail)
+export(frsr0)
 importFrom(Rcpp,sourceCpp)
 importFrom(RcppParallel,RcppParallelLibs)
 useDynLib(frsrr, .registration = TRUE)

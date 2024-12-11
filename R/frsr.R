@@ -8,11 +8,11 @@ NULL
 #' A parameterized Fast Reciprocal Square Root algorithm written in C++.
 #'
 #' @param x A numeric vector of input values.
-#' @param magic An unsigned 32-bit integer restoring constant. Default is 0x5f3759df.
-#' @param NR An integer specifying the maximum number of Newton-Raphson iterations. Default is 1.
-#' @param A Newton-Raphson parameter where \eqn{(A - B * x * y_n^2)}. Default is \code{1.5}.
-#' @param B Newton-Raphson parameter. Default is \code{0.5}.
-#' @param tol The absolute relative error at which to stop early. Default is 0 (no early stopping).
+#' @param magic An optional unsigned 32-bit integer restoring constant. Default is 0x5f3759df.
+#' @param NR An optional integer specifying the maximum number of Newton-Raphson iterations. Default is 1.
+#' @param A Optional Newton-Raphson parameter where \eqn{(A - B * x * y_n^2)}. Default is \code{1.5}.
+#' @param B Optional Newton-Raphson parameter. Default is \code{0.5}.
+#' @param tol Optional value for the absolute relative error at which to stop early. Default is 0 (no early stopping).
 #'
 #' @return 
 #' \code{frsr} returns a numeric vector of the same length as \code{x},
@@ -27,6 +27,13 @@ NULL
 #'     \item{diff}{Difference between final and penultimate approximations}
 #'     \item{iters}{Number of iterations performed}
 #'
+#' \code{frsr0} returns a numeric vector of the same length as \code{x},
+#' containing the initial approximations of 1/sqrt(x) from integer operations.
+#' it accepts only two arguments, \code{x} and \code{magic}. frsr0 is 
+#' mainly used for allowing manipuation of the NR formula while keeping
+#' the intitial guess in C++. It is exposed because it will be faster than
+#' calling frsr with NR = 0.
+#' 
 #' @details
 #' The function supplies a Fast Reciprocal Square Root algorithm, which provides
 #' an approximation of 1/sqrt(x). The user can specify their own parameters. The
@@ -64,8 +71,14 @@ NULL
 #' S. Summit, (2023). Answer to "Why does the integer representation of a floating point number offer a piecewise linear approximation to the logarithm?" Stack Overflow. \url{https://stackoverflow.com/a/75772363/1188479}
 #'
 #' @examples
-#' \dontrun{
-#' # Custom parameters
+#' \donttest{
+#' # frsr0 accepts only x and magic
+#' result0 <- frsr0(c(1, 4, 9, 16), magic = 0x5f375a86)
+#' ## result0 is a vector of length 4
+#' print(result0)
+#' # [1] 0.9990148 0.4995074 0.3337626 0.2497537
+#' 
+#' # Custom Newton-Raphson parameters for frsr and frsr.detail
 #' result <- frsr(c(1, 4, 9, 16), magic = 0x5f375a86, NR = 2, A = 1.6, B = 0.6)
 #' ## result is a vector of length 4
 #' print(result)
@@ -83,6 +96,13 @@ NULL
 #' }
 #' @name frsr
 NULL
+
+#' Compute initial guess for Fast Reciprocal Square Root
+#' @rdname frsr
+#' @export
+frsr0 <- function(x, magic = 0x5f3759df) {
+  .Call('_yourpackagename_frsr0', PACKAGE = 'yourpackagename', x, as.integer(magic))
+}
 
 #' @rdname frsr
 #' @export
