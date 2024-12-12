@@ -8,11 +8,11 @@ NULL
 #' A parameterized Fast Reciprocal Square Root algorithm written in C++.
 #'
 #' @param x A numeric vector of input values.
-#' @param magic An optional unsigned 32-bit integer restoring constant. Default is 0x5f3759df.
-#' @param NR An optional integer specifying the maximum number of Newton-Raphson iterations. Default is 1.
-#' @param A Optional Newton-Raphson parameter where \eqn{(A - B * x * y_n^2)}. Default is \code{1.5}.
-#' @param B Optional Newton-Raphson parameter. Default is \code{0.5}.
-#' @param tol Optional value for the absolute relative error at which to stop early. Default is 0 (no early stopping).
+#' @param magic Integer restoring constant. Default is 0x5f3759df.
+#' @param NR Integer specifying the maximum Newton-Raphson iterations. Default is 1.
+#' @param A Newton-Raphson parameter where \eqn{(A - B * x * y_n^2)}. Default is \code{1.5}.
+#' @param B Newton-Raphson parameter. Default is \code{0.5}.
+#' @param tol The absolute relative error at which to stop early. Default is 0 (no early stopping).
 #'
 #' @return 
 #' \code{frsr} returns a numeric vector of the same length as \code{x},
@@ -68,7 +68,7 @@ NULL
 #'
 #' J. T. Coonen, (1984) §2.3 "A Poor Man's Logarithm" in Contributions to a Proposed Standard for Binary Floating-Point Arithmetic. PhD Thesis, University of California Berkeley
 #'
-#' S. Summit, (2023). Answer to "Why does the integer representation of a floating point number offer a piecewise linear approximation to the logarithm?" Stack Overflow. \url{https://stackoverflow.com/a/75772363/1188479}
+#' S. Summit, (2023) Answer to "Why does the integer representation of a floating point number offer a piecewise linear approximation to the logarithm?" Stack Overflow. \url{https://stackoverflow.com/a/75772363/1188479}
 #'
 #' @examples
 #' \donttest{
@@ -101,7 +101,7 @@ NULL
 #' @rdname frsr
 #' @export
 frsr0 <- function(x, magic = 0x5f3759df) {
-  .Call('_yourpackagename_frsr0', PACKAGE = 'yourpackagename', x, as.integer(magic))
+  .Call('_frsrr_frsr0', PACKAGE = 'frsrr', x, as.integer(magic))
 }
 
 #' @rdname frsr
