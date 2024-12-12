@@ -35,8 +35,8 @@
 #' \donttest{
 #' x <- c(1, 4, 9, 16)
 #' ex_formula <- quote(y * (1.5 - 0.5 * x * y^2))
-#' result <- customIter(x, frsr0(x), ex_formula)
-#' print(result)
+#' result <- customIter(x, formula = ex_formula)
+#' print(result$final)
 #' # [1] 0.9990148 0.4995074 0.3337626 0.2497537
 #' }
 #' 
