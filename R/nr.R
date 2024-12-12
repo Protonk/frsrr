@@ -9,10 +9,7 @@
 #' @param tol Tolerance level for stopping criterion. Default is \code{0}.
 #'
 #' @return 
-#' \code{customIter} returns a numeric vector of the same length as \code{x},
-#' using \code{frsr0}.
-#' 
-#' \code{customIter.detail} returns a data frame with columns:
+#' A data frame of \code{length(x)} rows with columns:
 #'    \item{input}{The input values}
 #'    \item{initial}{Initial approximation from integer operations}
 #'    \item{final}{Result from final iteration}
@@ -54,30 +51,8 @@ ynplusone <- function(x, guess, formula) {
   f(y, x)
 }
 
-#' @rdname customIter
 #' @export
 customIter <- function(x, magic = 0x5f3759df, formula, NR = 1, tol = 0) {
-
-  y <- frsr0(x, magic)
-  reference <- 1/ sqrt(x)
-  iter <- 0
-  
-  # Iterate until NR is reached or error is below tol
-  while (iter < NR) {
-    new_y <- ynplusone(x, y, formula)
-    error <- abs(new_y - reference) / reference
-    y <- new_y
-    iter <- iter + 1
-    if (max(error) < tol && tol > 0) {
-        break
-    }
-  }
-  y
-}
-
-#' @rdname customIter
-#' @export
-customIter.detail <- function(x, magic = 0x5f3759df, formula, NR = 1, tol = 0) {
   y <- frsr0(x, magic)
   reference <- 1 / sqrt(x)
   iter <- 0
@@ -95,18 +70,13 @@ customIter.detail <- function(x, magic = 0x5f3759df, formula, NR = 1, tol = 0) {
     }
   }
   
-  final <- y
-  error_final <- error
-  converged <- ifelse(tol > 0 && iter < NR, TRUE, FALSE)
-  conv_rate <- (error_initial - error_final) / iter
-  
   data.frame(
     input = x,
     initial = initial,
-    final = final,
-    error = error_final,
-    converged = converged,
-    conv_rate = conv_rate,
+    final = y,
+    error = error,
+    converged = ifelse(tol > 0 && error < tol, TRUE, FALSE),
+    conv_rate = (error_initial - error) / iter,
     iters = iter
   )
 }
