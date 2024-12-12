@@ -65,6 +65,9 @@ customIter <- function(x, magic = 0x5f3759df, formula, NR = 1, tol = 0) {
     error <- abs(new_y - reference) / reference
     y <- new_y
     iter <- iter + 1
+    # for varied input vectors x,
+    # we may not catch convergence with "max"
+    # as some elements may not converge while others do
     if (max(error) < tol && tol > 0) {
       break
     }
