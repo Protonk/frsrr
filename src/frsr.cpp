@@ -21,11 +21,30 @@ struct FRSRResult {
 NumericVector frsr0(NumericVector x, uint32_t magic = 0x5f3759df) {
     NumericVector initial_guess(x.size());
     for (std::size_t j = 0; j < x.size(); ++j) {
+        // A union here allows us to represent the same memory bits
+        // as both a float and an unsigned integer, giving us access
+        // to the "evil floating point bit level hacking" of 
+        // the https://en.wikipedia.org/wiki/Fast_inverse_square_root
+        // without invoking undefined behavior.
+        // " [T]]he bit pattern of a floating point number, 
+        //   interpreted as an integer, gives a piecewise linear 
+        //   approximation to the logarithm function"
+        //  From Jim Blinn's "Floating-point tricks" (1997)
+        //  The first step to get 1/sqrt(x) is to get -1/2 * log2(x),
+        //  this is our "poor man's" logarithm.
         union {
             float f;
             uint32_t u;
         } y = {static_cast<float>(x[j])};
+        // The magic constant is largely a restoring constant,
+        // restoring the exponent bits lost when the float is right shifted.
+        // But a specially chosen constant can give a better first guess.
+        // This divides by -2, so now we have a guess at -1/2 * log2(x).
         y.u = static_cast<uint32_t>(magic) - (y.u >> 1);
+        // Blink and you'll miss it. Moving from y.u to y.f takes us
+        // out of the logarithmic domain and approximates an exponential.
+        // exp(-1/2 * log2(x)) = 1/sqrt(x), so that's our approximation
+        // to feed into Newton's method.
         initial_guess[j] = y.f;
     }
     return initial_guess;
@@ -48,7 +67,7 @@ struct FRSRWorker : public Worker {
       float reference = 1 / std::sqrt(x_val);
       float rel_error = std::numeric_limits<float>::max();
       int actual_iters = 0;
-
+      // Initial guess comes from frsr0()
       float y = initial_guess[j];
       res.initial[j] = y;
       // so we always have a diff available (may be 0 if NR == 0)
