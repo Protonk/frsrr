@@ -17,26 +17,26 @@ test_that("ynplusone works with different formulae", {
     expect_false(isTRUE(abs(wrong - std_result) < 1e-3))
 })
 
-test_that("customIteration works with default parameters", {
+test_that("customIter works with default parameters", {
     x <- c(1, 4, 9, 16)
     formula <- quote(y * (1.5 - 0.5 * x * y^2))
-    result <- customIteration(x, formula = formula)
+    result <- customIter(x, formula = formula)
     expected <- frsr(x)
     expect_equal(result, expected, tolerance = 1e-2)
 })
 
-test_that("customIteration works with multiple iterations", {
+test_that("customIter works with multiple iterations", {
     x <- c(1, 4, 9, 16)
     formula <- quote(y * (1.5 - 0.5 * x * y^2))
-    result <- customIteration(x, formula = formula, NR = 5)
+    result <- customIter(x, formula = formula, NR = 5)
     expected <- frsr(x, NR = 5)
     expect_equal(result, expected, tolerance = 1e-3)
 })
 
-test_that("customIteration respects tolerance", {
+test_that("customIter respects tolerance", {
     x <- c(1, 4, 9, 16)
     formula <- quote(y * (1.5 - 0.5 * x * y^2))
-    result <- customIteration(x, formula = formula, tol = 1e-5)
+    result <- customIter(x, formula = formula, tol = 1e-5)
     expected <- frsr(x)
     expect_equal(result, expected, tolerance = 1e-4)
 })

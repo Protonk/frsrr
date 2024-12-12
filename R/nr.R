@@ -9,8 +9,16 @@
 #' @param tol Tolerance level for stopping criterion. Default is \code{0}.
 #'
 #' @return 
-#' \code{customIteration} returns a numeric vector of the same length as \code{x},
-#' using \code{frsr0} and performing Newton-Raphson iterations with a user-supplied formula.
+#' \code{customIter} returns a numeric vector of the same length as \code{x},
+#' using \code{frsr0}.
+#' 
+#' \code{customIter.detail} returns a data frame with columns:
+#'    \item{input}{The input values}
+#'    \item{initial}{Initial approximation from integer operations}
+#'    \item{final}{Result from final iteration}
+#'    \item{error}{Absolute relative error of final versus standard library}
+#'    \item{converged}{Whether the algorithm converged}
+#'    \item{conv_rate}{Mean rate of convergence}
 #'
 #' @details
 #' While \code{frsr} uses C++ internally, this is difficult to do when 
@@ -30,12 +38,12 @@
 #' \donttest{
 #' x <- c(1, 4, 9, 16)
 #' ex_formula <- quote(y * (1.5 - 0.5 * x * y^2))
-#' result <- customIteration(x, frsr0(x), ex_formula)
+#' result <- customIter(x, frsr0(x), ex_formula)
 #' print(result)
 #' # [1] 0.9990148 0.4995074 0.3337626 0.2497537
 #' }
 #' 
-#' @name customIteration
+#' @name customIter
 NULL
 
 ynplusone <- function(x, guess, formula) {
@@ -46,8 +54,9 @@ ynplusone <- function(x, guess, formula) {
   f(y, x)
 }
 
+#' @rdname customIter
 #' @export
-customIteration <- function(x, magic = 0x5f3759df, formula, NR = 1, tol = 0) {
+customIter <- function(x, magic = 0x5f3759df, formula, NR = 1, tol = 0) {
 
   y <- frsr0(x, magic)
   reference <- 1/ sqrt(x)
@@ -63,5 +72,41 @@ customIteration <- function(x, magic = 0x5f3759df, formula, NR = 1, tol = 0) {
         break
     }
   }
-  return(y)
+  y
+}
+
+#' @rdname customIter
+#' @export
+customIter.detail <- function(x, magic = 0x5f3759df, formula, NR = 1, tol = 0) {
+  y <- frsr0(x, magic)
+  reference <- 1 / sqrt(x)
+  iter <- 0
+  initial <- y
+  error_initial <- abs(initial - reference) / reference
+  
+  # Iterate until NR is reached or error is below tol
+  while (iter < NR) {
+    new_y <- ynplusone(x, y, formula)
+    error <- abs(new_y - reference) / reference
+    y <- new_y
+    iter <- iter + 1
+    if (max(error) < tol && tol > 0) {
+      break
+    }
+  }
+  
+  final <- y
+  error_final <- error
+  converged <- ifelse(tol > 0 && iter < NR, TRUE, FALSE)
+  conv_rate <- (error_initial - error_final) / iter
+  
+  data.frame(
+    input = x,
+    initial = initial,
+    final = final,
+    error = error_final,
+    converged = converged,
+    conv_rate = conv_rate,
+    iters = iter
+  )
 }
