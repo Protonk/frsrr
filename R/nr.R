@@ -35,12 +35,12 @@
 #' \donttest{
 #' x <- c(1, 4, 9, 16)
 #' ex_formula <- quote(y * (1.5 - 0.5 * x * y^2))
-#' result <- customIter(x, formula = ex_formula)
+#' result <- customNR(x, formula = ex_formula)
 #' print(result$final)
 #' # [1] 0.9990148 0.4995074 0.3337626 0.2497537
 #' }
 #' 
-#' @name customIter
+#' @name customNR
 NULL
 
 ynplusone <- function(x, guess, formula) {
@@ -52,7 +52,7 @@ ynplusone <- function(x, guess, formula) {
 }
 
 #' @export
-customIter <- function(x, magic = 0x5f3759df, formula, NR = 1, tol = 0) {
+customNR <- function(x, magic = 0x5f3759df, formula, NR = 1, tol = 0) {
   y <- frsr0(x, magic)
   reference <- 1 / sqrt(x)
   iter <- 0
