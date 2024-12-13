@@ -1,20 +1,30 @@
-
-test_that("sample_frsr generates correct number of samples", {
-  n <- 10
-  result <- sample_frsr(n)
-  expect_equal(nrow(result), n)
+test_that("boundedStratifiedSample returns correct number of samples", {
+  result <- boundedStratifiedSample(10, -2, 2)
+  expect_length(result, 10)
 })
 
-test_that("sample_frsr respects input range", {
-  n <- 10
-  x_min <- 0.25
-  x_max <- 1.0
-  result <- sample_frsr(n, x_min = x_min, x_max = x_max)
-  expect_true(all(result$input >= x_min & result$input <= x_max))
+test_that("boundedStratifiedSample throws error for non-numeric n", {
+  expect_error(boundedStratifiedSample("ten", -2, 2), "'n' must be a positive integer")
 })
 
-test_that("sample_frsr includes parameters when keep_params is TRUE", {
-  n <- 10
-  result <- sample_frsr(n, keep_params = TRUE)
-  expect_true(all(c("magic", "NR", "A", "B", "tol") %in% colnames(result)))
+test_that("boundedStratifiedSample throws error for non-positive n", {
+  expect_error(boundedStratifiedSample(-10, -2, 2), "'n' must be a positive integer")
+})
+
+test_that("boundedStratifiedSample throws error for non-integer n", {
+  expect_error(boundedStratifiedSample(10.5, -2, 2), "'n' must be a positive integer")
+})
+
+test_that("boundedStratifiedSample throws error for non-numeric low/high", {
+  expect_error(boundedStratifiedSample(10, "low", 2), "'low' and 'high' must be numeric")
+  expect_error(boundedStratifiedSample(10, -2, "high"), "'low' and 'high' must be numeric")
+})
+
+test_that("boundedStratifiedSample throws error for low < -126", {
+  expect_error(boundedStratifiedSample(10, -127, 2), "Lower bound is too small. 'low' must be >= -126")
+})
+
+test_that("boundedStratifiedSample returns samples within bounds", {
+  result <- boundedStratifiedSample(10, -2, 2)
+  expect_true(all(result >= 2^(-2) & result < 2^2))
 })
