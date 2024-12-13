@@ -14,6 +14,9 @@ NULL
 #' @param B Newton-Raphson parameter. Default is \code{0.5}.
 #' @param tol The absolute relative error at which to stop early. Default is 0 (no early stopping).
 #'
+#' \code{frsr.detail} accepts an additional argument:
+#' @param keep_params Logical. If \code{TRUE}, generation parameters are included in the output. Default is \code{FALSE}.
+#'
 #' @return 
 #' \code{frsr} returns a numeric vector of the same length as \code{x},
 #' containing the \code{final} approximations of 1/sqrt(x).
@@ -26,6 +29,13 @@ NULL
 #'     \item{error}{Absolute relative error of final versus standard library}
 #'     \item{diff}{Difference between final and penultimate approximations}
 #'     \item{iters}{Number of iterations performed}
+#'
+#' If \code{keep_params = TRUE}, the data frame will also include columns:
+#'    \item{magic}{The magic constant(s) used}
+#'    \item{NR}{Maximum number of Newton-Raphson iterations}
+#'    \item{A}{Newton-Raphson parameter A}
+#'    \item{B}{Newton-Raphson parameter B}
+#'    \item{tol}{Specified tolerance}
 #'
 #' \code{frsr0} returns a numeric vector of the same length as \code{x},
 #' containing the initial approximations of 1/sqrt(x) from integer operations.
@@ -107,11 +117,15 @@ frsr0 <- function(x, magic = 0x5f3759df) {
 #' @rdname frsr
 #' @export
 frsr <- function(x, magic = 0x5f3759df, NR = 1, A = 1.5, B = 0.5, tol = 0) {
-  .Call('_frsrr_frsr', PACKAGE = 'frsrr', x, magic, NR, A, B, tol)
+  .Call('_frsrr_frsr', PACKAGE = 'frsrr', x, as.integer(magic), as.integer(NR), as.numeric(A), as.numeric(B), as.numeric(tol))
 }
 
 #' @rdname frsr
 #' @export
-frsr.detail <- function(x, magic = 0x5f3759df, NR = 1, A = 1.5, B = 0.5, tol = 0) {
-  .Call('_frsrr_frsr_detail', PACKAGE = 'frsrr', x, magic, NR, A, B, tol)
+frsr.detail <- function(x, magic = 0x5f3759df, NR = 1, A = 1.5, B = 0.5, tol = 0, keep_params = FALSE) {
+  .Call('_frsrr_frsr_detail', PACKAGE = 'frsrr', x, as.integer(magic), as.integer(NR), as.numeric(A), as.numeric(B), as.numeric(tol), keep_params)
 }
+
+
+
+

@@ -78,3 +78,21 @@ test_that("frsr default returns a numeric vector", {
   expect_s3_class(result_multiple_detail, "data.frame")
   expect_equal(nrow(result_multiple_detail), length(input_vector))
 })
+
+test_that("frsr.detail includes parameters when keep_params is TRUE", {
+  result <- frsr.detail(4, keep_params = TRUE)
+  expect_true("magic" %in% names(result))
+  expect_true("NR" %in% names(result))
+  expect_true("A" %in% names(result))
+  expect_true("B" %in% names(result))
+  expect_true("tol" %in% names(result))
+})
+
+test_that("frsr.detail does not include parameters when keep_params is FALSE", {
+  result <- frsr.detail(4, keep_params = FALSE)
+  expect_false("magic" %in% names(result))
+  expect_false("NR" %in% names(result))
+  expect_false("A" %in% names(result))
+  expect_false("B" %in% names(result))
+  expect_false("tol" %in% names(result))
+})
