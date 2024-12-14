@@ -30,13 +30,13 @@ devtools::install_github("Protonk/frsrr")
 library(frsrr)
 
 # Custom parameters
-result <- frsr(c(1, 4, 9, 16), magic = 0x5f375a86, NR = 2, A = 1.6, B = 0.6)
+result <- frsr(c(1, 4, 9, 16), magic = 0x5f375a86, NRmax = 2, A = 1.6, B = 0.6)
 ## result is a vector of length 4
 print(result)
 # [1] 0.9990148 0.4995074 0.3337626 0.2497537
 
 # Optional detail
-result.df <- frsr.detail(c(pi, 2^-31, 0.4, 6.02e23))
+result.df <- frsr(c(pi, 2^-31, 0.4, 6.02e23), detail = TRUE)
 ## result.df is a dataframe with 4 rows and 7 columns
 print(result)
 #          input      initial    after_one        final        error          diff iters

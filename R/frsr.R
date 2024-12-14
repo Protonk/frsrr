@@ -9,19 +9,17 @@ NULL
 #'
 #' @param x A numeric vector of input values.
 #' @param magic Integer restoring constant. Default is 0x5f3759df.
-#' @param NR Integer specifying the maximum Newton-Raphson iterations. Default is 1.
+#' @param NRmax Integer specifying the maximum Newton-Raphson iterations. Default is 1.
 #' @param A Newton-Raphson parameter where \eqn{(A - B * x * y_n^2)}. Default is \code{1.5}.
 #' @param B Newton-Raphson parameter. Default is \code{0.5}.
 #' @param tol The absolute relative error at which to stop early. Default is 0 (no early stopping).
-#'
-#' \code{frsr.detail} accepts an additional argument:
-#' @param keep_params Logical. If \code{TRUE}, generation parameters are included in the output. Default is \code{FALSE}.
+#' @param detail Logical. If \code{TRUE}, a data frame with detailed results is returned. Default is \code{FALSE}.
+#' @param keep_params Logical. If \code{TRUE}, generation parameters are included in detailed output. Default is \code{FALSE}.
 #'
 #' @return 
-#' \code{frsr} returns a numeric vector of the same length as \code{x},
-#' containing the \code{final} approximations of 1/sqrt(x).
+#' \code{frsr} returns a numeric vector of \code{length(x)}.
 #'
-#' \code{frsr.detail} returns a data frame with columns:
+#' If \code{detail = TRUE}, returns a data frame of \code{length(x)} rows with columns:
 #'     \item{input}{The input values}
 #'     \item{initial}{Initial approximation from integer operations}
 #'     \item{after_one}{Result after one iteration of Newton-Raphson}
@@ -32,19 +30,13 @@ NULL
 #'
 #' If \code{keep_params = TRUE}, the data frame will also include columns:
 #'    \item{magic}{The magic constant(s) used}
-#'    \item{NR}{Maximum number of Newton-Raphson iterations}
+#'    \item{NRmax}{Maximum number of Newton-Raphson iterations}
 #'    \item{A}{Newton-Raphson parameter A}
 #'    \item{B}{Newton-Raphson parameter B}
 #'    \item{tol}{Specified tolerance}
-#'
-#' \code{frsr0} returns a numeric vector of the same length as \code{x},
-#' containing the initial approximations of 1/sqrt(x) from integer operations.
-#' it accepts only two arguments, \code{x} and \code{magic}. frsr0 is 
-#' mainly used for allowing manipuation of the NR formula while keeping
-#' the intitial guess in C++. It is exposed because it will be faster than
-#' calling frsr with NR = 0.
 #' 
 #' @details
+#' 
 #' The function supplies a Fast Reciprocal Square Root algorithm, which provides
 #' an approximation of 1/sqrt(x). The user can specify their own parameters. The
 #' default values are set to those used by the famous "fast inverse square
@@ -65,7 +57,7 @@ NULL
 #' `0x5f2ffb20` to `0x5f404ed0` will give acceptable levels of error.
 #'
 #' The Newton-Raphson step \eqn{y_{n+1} = y_n * (1.5 - 0.5 * x * y_n^2)}
-#' is performed repeatedly until the specified maximum NR is reached. The
+#' is performed repeatedly until the specified maximum NRmax is reached. The
 #' default is one. Grossly different values of magic from the default may
 #' require many iterations to approach the correct output.
 #'
@@ -82,20 +74,15 @@ NULL
 #'
 #' @examples
 #' \donttest{
-#' # frsr0 accepts only x and magic
-#' result0 <- frsr0(c(1, 4, 9, 16), magic = 0x5f375a86)
-#' ## result0 is a vector of length 4
-#' print(result0)
-#' # [1] 0.9990148 0.4995074 0.3337626 0.2497537
 #' 
-#' # Custom Newton-Raphson parameters for frsr and frsr.detail
-#' result <- frsr(c(1, 4, 9, 16), magic = 0x5f375a86, NR = 2, A = 1.6, B = 0.6)
+#' # Custom Newton-Raphson parameters
+#' result <- frsr(c(1, 4, 9, 16), magic = 0x5f375a86, NRmax = 2, A = 1.6, B = 0.6)
 #' ## result is a vector of length 4
 #' print(result)
 #' # [1] 0.9990148 0.4995074 0.3337626 0.2497537
 #'
 #' # Optional detail
-#' result.df <- frsr.detail(c(pi, 2^-31, 0.4, 6.02e23))
+#' result.df <- frsr(c(pi, 2^-31, 0.4, 6.02e23), detail = TRUE)
 #' ## result.df is a dataframe with 4 rows and 7 columns
 #' print(result.df)
 #' #          input      initial    after_one        final        error          diff iters
@@ -107,25 +94,25 @@ NULL
 #' @name frsr
 NULL
 
-#' Compute initial guess for Fast Reciprocal Square Root
 #' @rdname frsr
 #' @export
-frsr0 <- function(x, magic = 0x5f3759df) {
-  .Call('_frsrr_frsr0', PACKAGE = 'frsrr', x, as.integer(magic))
+frsr <- function(x, magic = 0x5f3759df, NRmax = 1,
+                 A = 1.5, B = 0.5, tol = 0,
+                 detail = FALSE, keep_params = FALSE) {
+  
+  magic <- ifelse(length(magic) == 1, rep(magic, length(x)), magic)
+  NRmax <- ifelse(length(NRmax) == 1, rep(NRmax, length(x)), NRmax)
+  A <- ifelse(length(A) == 1, rep(A, length(x)), A)
+  B <- ifelse(length(B) == 1, rep(B, length(x)), B)
+  tol <- ifelse(length(tol) == 1, rep(tol, length(x)), tol)
+
+  if (!detail) {
+    .Call('_frsrr_frsr_min', PACKAGE = 'frsrr',
+          x, as.integer(magic), as.integer(NRmax),
+          as.numeric(A), as.numeric(B), as.numeric(tol))
+  } else {
+    .Call('_frsrr_frsr', PACKAGE = 'frsrr',
+          x, as.integer(magic), as.integer(NRmax),
+          as.numeric(A), as.numeric(B), as.numeric(tol), as.logical(keep_params))
+  }
 }
-
-#' @rdname frsr
-#' @export
-frsr <- function(x, magic = 0x5f3759df, NR = 1, A = 1.5, B = 0.5, tol = 0) {
-  .Call('_frsrr_frsr', PACKAGE = 'frsrr', x, as.integer(magic), as.integer(NR), as.numeric(A), as.numeric(B), as.numeric(tol))
-}
-
-#' @rdname frsr
-#' @export
-frsr.detail <- function(x, magic = 0x5f3759df, NR = 1, A = 1.5, B = 0.5, tol = 0, keep_params = FALSE) {
-  .Call('_frsrr_frsr_detail', PACKAGE = 'frsrr', x, as.integer(magic), as.integer(NR), as.numeric(A), as.numeric(B), as.numeric(tol), keep_params)
-}
-
-
-
-

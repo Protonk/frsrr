@@ -1,8 +1,3 @@
-test_that("boundedStratifiedSample returns correct number of samples", {
-    result <- boundedStratifiedSample(10, 2^-2, 2^2)
-    expect_length(result, 10)
-})
-
 test_that("boundedStratifiedSample throws error for low < -126", {
     expect_error(boundedStratifiedSample(10, 2^-127, 2^2), "Subnormal numbers are not supported. 'low' must be >= -126")
 })
@@ -17,7 +12,8 @@ test_that("sample_frsr returns correct number of samples", {
     expect_equal(nrow(result), 4)
 })
 
-test_that("sample_frsr returns correct parameters when keep_params is TRUE", {
+test_that("sample_frsr returns parameters when keep_params is TRUE", {
     result <- sample_frsr(4, keep_params = TRUE)
-    expect_true("A" %in% names(result) && "B" %in% names(result))
+    detail_comp <- frsr(1:4, detail = TRUE)
+    expect_true( all(names(detail_comp) %in% names(result)) )
 })

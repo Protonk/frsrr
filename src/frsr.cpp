@@ -13,12 +13,11 @@ struct FRSRResult {
     NumericVector final;
     NumericVector error;
     NumericVector diff;
-    IntegerVector iters_vec;
+    IntegerVector iters;
     
-    FRSRResult(int n) : result(n), initial(n), after_one(n), final(n), error(n), diff(n), iters_vec(n) {}
+    FRSRResult(int n) : result(n), initial(n), after_one(n), final(n), error(n), diff(n), iters(n) {}
 };
 
-// [[Rcpp::export]]
 NumericVector frsr0(NumericVector x, uint32_t magic = 0x5f3759df) {
     NumericVector initial_guess(x.size());
     for (std::size_t j = 0; j < x.size(); ++j) {
@@ -54,13 +53,13 @@ NumericVector frsr0(NumericVector x, uint32_t magic = 0x5f3759df) {
 struct FRSRWorker : public Worker {
     const RVector<double> x;
     const uint32_t magic;
-    const int NR;
+    const int NRmax;
     const float A, B, tol;
     FRSRResult& res;
     NumericVector initial_guess;
 
-    FRSRWorker(const NumericVector x, uint32_t magic, int NR, float A, float B, float tol, FRSRResult& res)
-        : x(x), magic(magic), NR(NR), A(A), B(B), tol(tol), res(res), initial_guess(frsr0(x, magic)) {}
+    FRSRWorker(const NumericVector x, uint32_t magic, int NRmax, float A, float B, float tol, FRSRResult& res)
+        : x(x), magic(magic), NRmax(NRmax), A(A), B(B), tol(tol), res(res), initial_guess(frsr0(x, magic)) {}
 
     void operator()(std::size_t begin, std::size_t end) {
         for (std::size_t j = begin; j < end; ++j) {
@@ -72,7 +71,7 @@ struct FRSRWorker : public Worker {
             float prev_y = y;
             res.initial[j] = y;
 
-            for (int i = 1; i <= NR; i++) {
+            for (int i = 1; i <= NRmax; i++) {
                 actual_iters++;
                 y = y * (A - B * x_val * y * y);
                 rel_error = std::abs(y - reference) / reference;
@@ -83,38 +82,32 @@ struct FRSRWorker : public Worker {
             res.diff[j] = y - prev_y;
             prev_y = y;
             res.final[j] = y;
-            res.iters_vec[j] = actual_iters;
+            res.iters[j] = actual_iters;
             res.error[j] = rel_error;
             res.result[j] = y;
         }
     }
 };
 
-FRSRResult core_frsr(NumericVector x, IntegerVector magic, IntegerVector NR, NumericVector A, NumericVector B, NumericVector tol) {
+// [[Rcpp::export]]
+NumericVector frsr_min(NumericVector x, IntegerVector magic, IntegerVector NRmax, NumericVector A, NumericVector B, NumericVector tol) {
     int n = x.size();
     FRSRResult res(n);
 
-    IntegerVector magic_vec = (magic.size() == 1) ? IntegerVector(n, magic[0]) : magic;
-    IntegerVector NR_vec = (NR.size() == 1) ? IntegerVector(n, NR[0]) : NR;
-    NumericVector A_vec = (A.size() == 1) ? NumericVector(n, A[0]) : A;
-    NumericVector B_vec = (B.size() == 1) ? NumericVector(n, B[0]) : B;
-    NumericVector tol_vec = (tol.size() == 1) ? NumericVector(n, tol[0]) : tol;
-
-    FRSRWorker frsrWorker(x, magic_vec[0], NR_vec[0], A_vec[0], B_vec[0], tol_vec[0], res);
+    FRSRWorker frsrWorker(x, magic[0], NRmax[0], A[0], B[0], tol[0], res);
     parallelFor(0, n, frsrWorker);
 
-    return res;
-}
-
-// [[Rcpp::export]]
-NumericVector frsr(NumericVector x, IntegerVector magic, IntegerVector NR, NumericVector A, NumericVector B, NumericVector tol) {
-    FRSRResult res = core_frsr(x, magic, NR, A, B, tol);
     return res.result;
 }
 
 // [[Rcpp::export]]
-DataFrame frsr_detail(NumericVector x, IntegerVector magic, IntegerVector NR, NumericVector A, NumericVector B, NumericVector tol, bool keep_params = false) {
-    FRSRResult res = core_frsr(x, magic, NR, A, B, tol);
+DataFrame frsr(NumericVector x, IntegerVector magic, IntegerVector NRmax, NumericVector A, NumericVector B, NumericVector tol, bool keep_params) {
+    int n = x.size();
+    FRSRResult res(n);
+
+    FRSRWorker frsrWorker(x, magic[0], NRmax[0], A[0], B[0], tol[0], res);
+    parallelFor(0, n, frsrWorker);
+    
     if (keep_params) {
         return DataFrame::create(
             _["input"] = x,
@@ -123,9 +116,9 @@ DataFrame frsr_detail(NumericVector x, IntegerVector magic, IntegerVector NR, Nu
             _["final"] = res.final,
             _["error"] = res.error,
             _["diff"] = res.diff,
-            _["iters"] = res.iters_vec,
+            _["iters"] = res.iters,
             _["magic"] = magic,
-            _["NR"] = NR,
+            _["NRmax"] = NRmax,
             _["A"] = A,
             _["B"] = B,
             _["tol"] = tol
@@ -138,7 +131,7 @@ DataFrame frsr_detail(NumericVector x, IntegerVector magic, IntegerVector NR, Nu
             _["final"] = res.final,
             _["error"] = res.error,
             _["diff"] = res.diff,
-            _["iters"] = res.iters_vec
+            _["iters"] = res.iters
         );
     }
 }

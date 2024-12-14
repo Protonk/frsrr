@@ -27,8 +27,8 @@ test_that("customNR works with default parameters", {
 test_that("customNR works with multiple iterations", {
     x <- c(1, 4, 9, 16)
     formula <- quote(y * (1.5 - 0.5 * x * y^2))
-    result <- customNR(x, formula = formula, NR = 5)
-    expect_equal(result$final, frsr(x, NR = 5), tolerance = 1e-3)
+    result <- customNR(x, formula = formula, NRmax = 5)
+    expect_equal(result$final, frsr(x, NRmax = 5), tolerance = 1e-3)
 })
 
 test_that("customNR produces expected output structure", {

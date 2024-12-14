@@ -1,12 +1,6 @@
 #' Bounded stratified sampling of positive floating point numbers
 #'
 #' This function is not exported and is intended for internal use only.
-#'
-#' @param n Number of samples to generate
-#' @param low Lower bound exponent
-#' @param high Upper bound exponent
-#' @return A numeric vector of length n with samples between 2^low and 2^high
-#'
 #' @details
 #'
 #' Samples uniformly within exponent ranges to draw unbiased samples
@@ -43,14 +37,14 @@ boundedStratifiedSample <- function(n, low, high) {
 #' @param x_min Minimum value for the input range. Default is \code{0.25}.
 #' @param x_max Maximum value for the input range. Default is \code{1.0}.
 #'
-#' @details The following parameters are passed to \code{\link{frsr.detail}}:
+#' @details The following parameters are passed to \code{\link{frsr}}:
 #'
 #' \itemize{
-#'  \item{"NR"}{Number of iterations for the Newton-Raphson method. Default is \code{1}.}
-#'  \item{"A"}{Parameter A for the iteration formula. Default is \code{1.5}.}
-#'  \item{"B"}{Parameter B for the iteration formula. Default is \code{0.5}.}
-#'  \item{"tol"}{Tolerance level for stopping criterion. Default is \code{0}.}
-#'  \item{"keep_params"}{Logical indicating whether to output parameters. Default is \code{FALSE}.}
+#'  \item{"NRmax"} {Number of iterations for the Newton-Raphson method. Default is \code{1}.}
+#'  \item{"A"} {Parameter A for the iteration formula. Default is \code{1.5}.}
+#'  \item{"B"} {Parameter B for the iteration formula. Default is \code{0.5}.}
+#'  \item{"tol"} {Tolerance level for stopping criterion. Default is \code{0}.}
+#'  \item{"keep_params"} {Logical indicating whether to output parameters. Default is \code{FALSE}.}
 #' }
 #'
 #' Floating point values are searched by stratified sampling 
@@ -64,11 +58,11 @@ boundedStratifiedSample <- function(n, low, high) {
 #' numbers much higher or lower requiring more iterations to converge or
 #' not converging at all.
 #'
-#' @return A data frame with the sampled values and optional details from \code{frsr.detail}.
+#' @return A data frame with the sampled values and optional details from \code{frsr}.
 #' 
 #' @seealso 
 #' 
-#' \code{\link{frsr.detail}}
+#' \code{\link{frsr}}
 #'
 #' @references
 #'
@@ -96,7 +90,7 @@ NULL
 sample_frsr <- function(n, 
                          magic_min = 1596980000L, magic_max = 1598050000L, 
                          x_min = 0.25, x_max = 1.0,
-                         NR = 1, A = 1.5, B = 0.5,
+                         NRmax = 1, A = 1.5, B = 0.5,
                          tol = 0,
                          keep_params = FALSE) {
      # Generate magic numbers using sample() without replacement
@@ -107,6 +101,9 @@ sample_frsr <- function(n,
     # Generate input values using bounded stratified sampling
     inputs <- boundedStratifiedSample(n, x_min, x_max)
   
-    # Call frsr.detail with generated inputs and parameters
-    frsr.detail(x = inputs, magic = magic_numbers, NR = NR, tol = tol, A = A, B = B, keep_params = keep_params)
+    # Call frsr with generated inputs and parameters
+    frsr(x = inputs, magic = magic_numbers,
+         NRmax = NRmax, tol = tol,
+         A = A, B = B,
+         keep_params = keep_params, detail = TRUE)
 }

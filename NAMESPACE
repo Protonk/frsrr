@@ -2,8 +2,6 @@
 
 export(customNR)
 export(frsr)
-export(frsr.detail)
-export(frsr0)
 export(sample_frsr)
 importFrom(Rcpp,sourceCpp)
 importFrom(RcppParallel,RcppParallelLibs)
