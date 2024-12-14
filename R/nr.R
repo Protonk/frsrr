@@ -5,7 +5,7 @@
 #' @param x A numeric vector of input values.
 #' @param formula A custom formula as a function of \code{y} and \code{x}.
 #' @param magic An optional magic number for the initial guess.
-#' @param NR Number of iterations to perform. Default is \code{1}.
+#' @param NRmax Number of iterations to perform. Default is \code{1}.
 #' @param tol Tolerance level for stopping criterion. Default is \code{0}.
 #'
 #' @return 
@@ -35,12 +35,12 @@
 #' \donttest{
 #' x <- c(1, 4, 9, 16)
 #' ex_formula <- quote(y * (1.5 - 0.5 * x * y^2))
-#' result <- customIter(x, formula = ex_formula)
+#' result <- customNR(x, formula = ex_formula)
 #' print(result$final)
 #' # [1] 0.9990148 0.4995074 0.3337626 0.2497537
 #' }
 #' 
-#' @name customIter
+#' @name customNR
 NULL
 
 ynplusone <- function(x, guess, formula) {
@@ -52,15 +52,15 @@ ynplusone <- function(x, guess, formula) {
 }
 
 #' @export
-customIter <- function(x, magic = 0x5f3759df, formula, NR = 1, tol = 0) {
-  y <- frsr0(x, magic)
+customNR <- function(x, magic = 0x5f3759df, formula, NRmax = 1, tol = 0) {
+  y <- frsr(x, magic, NRmax = 0)
   reference <- 1 / sqrt(x)
   iter <- 0
   initial <- y
   error_initial <- abs(initial - reference) / reference
   
-  # Iterate until NR is reached or error is below tol
-  while (iter < NR) {
+  # Iterate until NRmax is reached or error is below tol
+  while (iter < NRmax) {
     new_y <- ynplusone(x, y, formula)
     error <- abs(new_y - reference) / reference
     y <- new_y

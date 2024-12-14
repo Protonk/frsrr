@@ -12,3 +12,4 @@ R/RcppExports.R
 src/RcppExports.cpp
 .vscode/settings.json
 NAMESPACE
+src/sample.o
