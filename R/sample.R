@@ -17,21 +17,18 @@
 NULL
 
 boundedStratifiedSample <- function(n, low, high) {
-    if (!is.numeric(n) || n <= 0 || n != as.integer(n)) {
+    if (n <= 0 || is.integer(n)) {
         stop("'n' must be a positive integer")
     }
-    if (!is.numeric(low) || !is.numeric(high)) {
-        stop("'low' and 'high' must be numeric")
-    }
-    
+    ## Our C++ algorithm works with exponents,
+    ## but expressing that for a user is a pain.
+    low <- log2(low)
+    high <- log2(high)
+
     tryCatch(
         .Call('_frsrr_boundedStratifiedSample', PACKAGE = 'frsrr', n, low, high),
         error = function(e) {
-            if (grepl("Subnormal numbers are not supported", e$message)) {
-                stop("Lower bound must be >= -126", call. = FALSE)
-            } else {
-                stop(e$message, call. = FALSE)
-            }
+            stop(e$message, call. = FALSE)
         }
     )
 }
@@ -55,6 +52,17 @@ boundedStratifiedSample <- function(n, low, high) {
 #'  \item{"tol"}{Tolerance level for stopping criterion. Default is \code{0}.}
 #'  \item{"keep_params"}{Logical indicating whether to output parameters. Default is \code{FALSE}.}
 #' }
+#'
+#' Floating point values are searched by stratified sampling 
+#' which samples uniformly within exponent ranges, as that is how
+#' floating point numbers are distributed. The default range is 
+#' chosen because the the error of the FISR along \eqn{2^-2} and \eqn{2^0}
+#' repeats over the whole range of the function.
+#' 
+#' The default range for the magic number was determined by experiment.
+#' Values within this range are relatively good restoring constants, with
+#' numbers much higher or lower requiring more iterations to converge or
+#' not converging at all.
 #'
 #' @return A data frame with the sampled values and optional details from \code{frsr.detail}.
 #' 
@@ -97,9 +105,7 @@ sample_frsr <- function(n,
     magic_numbers <- sample(magic_min:magic_max, n, replace = FALSE)
     
     # Generate input values using bounded stratified sampling
-    # boundedStratifiedSample accepts exponents as input
-    # but that's a pain for users.
-    inputs <- boundedStratifiedSample(n, log2(x_min), log2(x_max))
+    inputs <- boundedStratifiedSample(n, x_min, x_max)
   
     # Call frsr.detail with generated inputs and parameters
     frsr.detail(x = inputs, magic = magic_numbers, NR = NR, tol = tol, A = A, B = B, keep_params = keep_params)
