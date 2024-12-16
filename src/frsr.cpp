@@ -70,6 +70,7 @@ struct FRSRWorker : public Worker {
             // Initial guess
             float y = frsr0(x[j], magic[j]);
             res.initial[j] = y;
+            rel_error = std::abs(y - reference) / reference;
 
             if (NRmax[j] == 0) {
                 // When NRmax is 0, skip Newton-Raphson iterations
@@ -77,7 +78,7 @@ struct FRSRWorker : public Worker {
                 res.final[j] = y;
                 res.diff[j] = NA_REAL;
                 res.iters[j] = 0;
-                res.error[j] = std::abs(y - reference) / reference;
+                res.error[j] = rel_error;
             } else {
                 // Newton-Raphson iterations
                 for (int i = 1; i <= NRmax[j]; i++) {
@@ -85,7 +86,7 @@ struct FRSRWorker : public Worker {
                     float prev_y = y;
                     y = y * (A[j] - B[j] * x[j] * y * y);
                     // most implementations use 1 iteration only
-                    if (i == 1) res.after_one[j] = y;
+                    if (actual_iters == 1) res.after_one[j] = y;
                     // For iters > 2, a difference is given so
                     // convergence can be checked on first
                     // and last iterations, rather than
