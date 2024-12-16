@@ -16,7 +16,7 @@ NULL
 #' @param detail Logical. If \code{TRUE}, a data frame with detailed results is returned. Default is \code{FALSE}.
 #' @param keep_params Logical. If \code{TRUE}, generation parameters are included in detailed output. Default is \code{FALSE}.
 #'
-#' @return 
+#' @return
 #' \code{frsr} returns a numeric vector of \code{length(x)}.
 #'
 #' If \code{detail = TRUE}, returns a data frame of \code{length(x)} rows with columns:
@@ -34,9 +34,9 @@ NULL
 #'    \item{A}{Newton-Raphson parameter A}
 #'    \item{B}{Newton-Raphson parameter B}
 #'    \item{tol}{Specified tolerance}
-#' 
+#'
 #' @details
-#' 
+#'
 #' The function supplies a Fast Reciprocal Square Root algorithm, which provides
 #' an approximation of 1/sqrt(x). The user can specify their own parameters. The
 #' default values are set to those used by the famous "fast inverse square
@@ -74,7 +74,7 @@ NULL
 #'
 #' @examples
 #' \donttest{
-#' 
+#'
 #' # Custom Newton-Raphson parameters
 #' result <- frsr(c(1, 4, 9, 16), magic = 0x5f375a86, NRmax = 2, A = 1.6, B = 0.6)
 #' ## result is a vector of length 4
@@ -99,20 +99,14 @@ NULL
 frsr <- function(x, magic = 0x5f3759df, NRmax = 1,
                  A = 1.5, B = 0.5, tol = 0,
                  detail = FALSE, keep_params = FALSE) {
-  
-  magic <- ifelse(length(magic) == 1, rep(magic, length(x)), magic)
-  NRmax <- ifelse(length(NRmax) == 1, rep(NRmax, length(x)), NRmax)
-  A <- ifelse(length(A) == 1, rep(A, length(x)), A)
-  B <- ifelse(length(B) == 1, rep(B, length(x)), B)
-  tol <- ifelse(length(tol) == 1, rep(tol, length(x)), tol)
-
-  if (!detail) {
-    .Call('_frsrr_frsr_min', PACKAGE = 'frsrr',
-          x, as.integer(magic), as.integer(NRmax),
-          as.numeric(A), as.numeric(B), as.numeric(tol))
+  arg_df <- data.frame(x = x, magic = magic,
+                       NRmax = NRmax, tol = tol,
+                       A = A, B = B)
+  .Call('_frsrr_frsr', PACKAGE = 'frsrr',
+          arg_df, keep_params) -> result
+  if (detail) {
+    return(result)
   } else {
-    .Call('_frsrr_frsr', PACKAGE = 'frsrr',
-          x, as.integer(magic), as.integer(NRmax),
-          as.numeric(A), as.numeric(B), as.numeric(tol), as.logical(keep_params))
+    return(result$final)
   }
 }

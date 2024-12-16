@@ -93,10 +93,9 @@ sample_frsr <- function(n,
                          NRmax = 1, A = 1.5, B = 0.5,
                          tol = 0,
                          keep_params = FALSE) {
-     # Generate magic numbers using sample() without replacement
-     # maybe in the future we can pass the sample option on
-     # but practically speaking there's no need for that.
-    magic_numbers <- sample(magic_min:magic_max, n, replace = FALSE)
+     # Generate with replacement so we don't get a 
+     # confusing error when the number of samples exceeds the range
+    magic_numbers <- sample(magic_min:magic_max, n, replace = TRUE)
     
     # Generate input values using bounded stratified sampling
     inputs <- boundedStratifiedSample(n, x_min, x_max)
