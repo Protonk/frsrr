@@ -29,7 +29,7 @@
 #' 
 #' @references
 #' 
-#' Gec, (2024) answer to "Why does this modified Newton's method fail to converge for N > 1 iterations?" Stack Overflow. \url{https://math.stackexchange.com/a/5007745/1025433}
+#' Gec, (2024) Answer to "Why does this modified Newton's method fail to converge for N > 1 iterations?" Stack Overflow. \url{https://math.stackexchange.com/a/5007745/1025433}
 #'
 #' @examples
 #' \donttest{

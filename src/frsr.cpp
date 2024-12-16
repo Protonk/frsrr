@@ -106,6 +106,8 @@ struct FRSRWorker : public Worker {
 
 // [[Rcpp::export]]
 DataFrame frsr(DataFrame input, bool keep_params) {
+    
+    // Extract input parameters
     NumericVector x = input["x"];
     IntegerVector magic = input["magic"];
     IntegerVector NRmax = input["NRmax"];
@@ -113,13 +115,14 @@ DataFrame frsr(DataFrame input, bool keep_params) {
     NumericVector B = input["B"];
     NumericVector tol = input["tol"];
     
+    // faster than input.nrow(), and we explicitly
+    // tell the user the rows will equal length(x)
     int n = x.size();
     FRSRResult res(n);
-    
+
     FRSRWorker worker(x, magic, NRmax, A, B, tol, res);
     
     parallelFor(0, n, worker);
-
 
     if (keep_params) {
         return DataFrame::create(

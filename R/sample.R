@@ -40,11 +40,11 @@ boundedStratifiedSample <- function(n, low, high) {
 #' @details The following parameters are passed to \code{\link{frsr}}:
 #'
 #' \itemize{
-#'  \item{"NRmax"} {Number of iterations for the Newton-Raphson method. Default is \code{1}.}
-#'  \item{"A"} {Parameter A for the iteration formula. Default is \code{1.5}.}
-#'  \item{"B"} {Parameter B for the iteration formula. Default is \code{0.5}.}
-#'  \item{"tol"} {Tolerance level for stopping criterion. Default is \code{0}.}
-#'  \item{"keep_params"} {Logical indicating whether to output parameters. Default is \code{FALSE}.}
+#'  \item{\code{"NRmax"}: Maximum iterations for the Newton-Raphson method. Default is \code{1}}
+#'  \item{\code{"A"}: Parameter A for the iteration formula. Default is \code{1.5}}
+#'  \item{\code{"B"}: Parameter B for the iteration formula. Default is \code{0.5}}
+#'  \item{\code{"tol"}: Tolerance level for stopping. Default is \code{0}}
+#'  \item{\code{"keep_params"}: Logical indicating whether to output parameters. Default is \code{FALSE}.}
 #' }
 #'
 #' Floating point values are searched by stratified sampling 
@@ -74,33 +74,35 @@ boundedStratifiedSample <- function(n, low, high) {
 #' 
 #' #' \donttest{
 #' # Generate 4 samples using default parameters
-#' samples <- sample_frsr(4)
+#' samples <- frsr_sample(4)
 #' print(samples)
-#'       input  initial after_one    final       error        diff iters
-#' 1 0.5472975 1.427882  1.345168 1.345168 0.004850830 -0.08271444     1
-#' 2 0.4076866 1.659807  1.557596 1.557596 0.005469586 -0.10221040     1
-#' 3 0.4417882 1.591603  1.496793 1.496793 0.005124446 -0.09481037     1
-#' 4 0.7982250 1.176955  1.114741 1.114741 0.004051689 -0.06221318     1
-#' }
+#' #       input  initial after_one    final        error         diff iters
+#' # 1 0.8100569 1.154508  1.108492 1.108492 0.0023223383 -0.046015978     1
+#' # 2 0.4073950 1.573407  1.566680 1.566680 0.0000273157 -0.006727338     1
+#' # 3 0.6304980 1.359966  1.247014 1.247014 0.0098225391 -0.112952113     1
+#' # 4 0.4316622 1.607666  1.514687 1.514687 0.0048355814 -0.092979550     1
+#' #}
 #'
 #' @export
-#' @name sample_frsr
+#' @name frsr_sample
 NULL
 
-sample_frsr <- function(n, 
+frsr_sample <- function(n, 
                          magic_min = 1596980000L, magic_max = 1598050000L, 
                          x_min = 0.25, x_max = 1.0,
                          NRmax = 1, A = 1.5, B = 0.5,
                          tol = 0,
                          keep_params = FALSE) {
-     # Generate with replacement so we don't get a 
-     # confusing error when the number of samples exceeds the range
+     # Replacement works best because the same integer
+     # if we sample enough to see it again will 
+     # be sampled with different parameters than last time
     magic_numbers <- sample(magic_min:magic_max, n, replace = TRUE)
     
     # Generate input values using bounded stratified sampling
     inputs <- boundedStratifiedSample(n, x_min, x_max)
   
     # Call frsr with generated inputs and parameters
+    # we assume if the user is using this function they want the details
     frsr(x = inputs, magic = magic_numbers,
          NRmax = NRmax, tol = tol,
          A = A, B = B,
