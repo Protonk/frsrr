@@ -96,7 +96,6 @@ struct FRSRWorker : public Worker {
                     if (tol[j] > 0 && rel_error <= tol[j]) break;
                 }
             }
-
             // Final results
             res.final[j] = y;
             res.iters[j] = actual_iters;
@@ -122,7 +121,6 @@ DataFrame frsr(DataFrame input, bool keep_params) {
     FRSRResult res(n);
 
     FRSRWorker worker(x, magic, NRmax, A, B, tol, res);
-    
     parallelFor(0, n, worker);
 
     if (keep_params) {

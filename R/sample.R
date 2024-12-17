@@ -1,32 +1,3 @@
-#' Bounded stratified sampling of positive floating point numbers
-#'
-#' This function is not exported and is intended for internal use only.
-#' @details
-#'
-#' Samples uniformly within exponent ranges to draw unbiased samples
-#' between \eqn{2^low} and \eqn{2^high}.
-#'
-#' @keywords internal
-#' @name boundedStratifiedSample
-NULL
-
-boundedStratifiedSample <- function(n, low, high) {
-    if (n <= 0 || is.integer(n)) {
-        stop("'n' must be a positive integer")
-    }
-    ## Our C++ algorithm works with exponents,
-    ## but expressing that for a user is a pain.
-    low <- log2(low)
-    high <- log2(high)
-
-    tryCatch(
-        .Call('_frsrr_boundedStratifiedSample', PACKAGE = 'frsrr', n, low, high),
-        error = function(e) {
-            stop(e$message, call. = FALSE)
-        }
-    )
-}
-
 #' Sample FRSR
 #'
 #' Generate samples for the Fast Reciprocal Square Root (FRSR) algorithm.
@@ -47,11 +18,6 @@ boundedStratifiedSample <- function(n, low, high) {
 #'  \item{\code{"keep_params"}: Logical indicating whether to output parameters. Default is \code{FALSE}.}
 #' }
 #'
-#' Floating point values are searched by stratified sampling 
-#' which samples uniformly within exponent ranges, as that is how
-#' floating point numbers are distributed. The default range is 
-#' chosen because the the error of the FISR along \eqn{2^-2} and \eqn{2^0}
-#' repeats over the whole range of the function.
 #' 
 #' The default range for the magic number was determined by experiment.
 #' Values within this range are relatively good restoring constants, with
@@ -63,12 +29,6 @@ boundedStratifiedSample <- function(n, low, high) {
 #' @seealso 
 #' 
 #' \code{\link{frsr}}
-#'
-#' @references
-#'
-#' Walker, A. J. (1974) Fast generation of uniformly distributed pseudorandom numbers with floating-point representation. Electronics Letters, 10, 533-534, \url{https://api.semanticscholar.org/CorpusID:110056594}
-#'
-#' Pharr, M. (2022) Sampling in Floating Point (2/3): 1D Intervals. Matt Pharr's Blog, \url{https://pharr.org/matt/blog/2022/03/14/sampling-float-intervals}
 #'
 #' @examples 
 #' 
@@ -87,24 +47,80 @@ boundedStratifiedSample <- function(n, low, high) {
 #' @name frsr_sample
 NULL
 
+#' @rdname frsr_sample
+#' @export
 frsr_sample <- function(n, 
-                         magic_min = 1596980000L, magic_max = 1598050000L, 
-                         x_min = 0.25, x_max = 1.0,
-                         NRmax = 1, A = 1.5, B = 0.5,
-                         tol = 0,
-                         keep_params = FALSE) {
-     # Replacement works best because the same integer
-     # if we sample enough to see it again will 
-     # be sampled with different parameters than last time
-    magic_numbers <- sample(magic_min:magic_max, n, replace = TRUE)
+                        magic_min = 1596980000L, magic_max = 1598050000L, 
+                        x_min = 0.25, x_max = 1.0,
+                        NRmax = 1, A = 1.5, B = 0.5,
+                        tol = 0,
+                        keep_params = FALSE) {
+    # Determine magic numbers based on whether magic_min or magic_max is NULL
+    magic_numbers <- if (is.null(magic_min)) {
+        rep(magic_max, n)  # Use magic_max if magic_min is NULL
+    } else if (is.null(magic_max)) {
+        rep(magic_min, n)  # Use magic_min if magic_max is NULL
+    } else {
+        sample(magic_min:magic_max, n, replace = TRUE)
+    }
     
-    # Generate input values using bounded stratified sampling
-    inputs <- boundedStratifiedSample(n, x_min, x_max)
+    # Determine inputs based on whether x_min or x_max is NULL
+    inputs <- if (is.null(x_min)) {
+        rep(x_max, n)  # Use x_max if x_min is NULL
+    } else if (is.null(x_max)) {
+        rep(x_min, n)  # Use x_min if x_max is NULL
+    } else {
+        boundedStratifiedSample(n, x_min, x_max)
+    }
   
     # Call frsr with generated inputs and parameters
-    # we assume if the user is using this function they want the details
     frsr(x = inputs, magic = magic_numbers,
          NRmax = NRmax, tol = tol,
          A = A, B = B,
          keep_params = keep_params, detail = TRUE)
+}
+
+
+#' Bounded stratified sampling of positive floating point numbers
+#'
+#' @param n Number of samples to generate.
+#' @param low Lower bound of the range.
+#' @param high Upper bound of the range.
+#'
+#' @return A numeric vector of length \code{n} with samples along the range
+#' 
+#' @details
+#'
+#' Floating point values are searched by stratified sampling 
+#' which samples uniformly within exponent ranges, as that is how
+#' floating point numbers are distributed. The default range is 
+#' chosen because the the error of the FISR along \eqn{2^-2} and \eqn{2^0}
+#' repeats over the whole range of the function.
+#'
+#' @references
+#'
+#' Walker, A. J. (1974) Fast generation of uniformly distributed pseudorandom numbers with floating-point representation. Electronics Letters, 10, 533-534, \url{https://api.semanticscholar.org/CorpusID:110056594}
+#'
+#' Pharr, M. (2022) Sampling in Floating Point (2/3): 1D Intervals. Matt Pharr's Blog, \url{https://pharr.org/matt/blog/2022/03/14/sampling-float-intervals}
+#'
+#' @name boundedStratifiedSample
+NULL
+
+#' @rdname frsr_sample
+#' @export
+boundedStratifiedSample <- function(n, low, high) {
+    if (n <= 0 || is.integer(n)) {
+        stop("'n' must be a positive integer")
+    }
+    ## Our C++ algorithm works with exponents,
+    ## but expressing that for a user is a pain.
+    low <- log2(low)
+    high <- log2(high)
+
+    tryCatch(
+        .Call('_frsrr_boundedStratifiedSample', PACKAGE = 'frsrr', n, low, high),
+        error = function(e) {
+            stop(e$message, call. = FALSE)
+        }
+    )
 }
