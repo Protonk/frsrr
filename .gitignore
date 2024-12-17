@@ -11,3 +11,4 @@ R/RcppExports.R
 src/RcppExports.cpp
 .vscode/settings.json
 src/sample.o
+man/*

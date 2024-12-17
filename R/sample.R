@@ -55,30 +55,6 @@
 #' @name frsr_sample
 NULL
 
-boundedStratifiedSample <- function(n, low, high) {
-    if (n <= 0 || is.integer(n)) {
-        stop("'n' must be a positive integer")
-    }
-    # swap low and high if low > high rather than bug the user
-    if (low > high) {
-        temp <- high
-        high <- low
-        low <- temp
-    }
-    
-    ## Our C++ algorithm works with exponents,
-    ## but expressing that for a user is a pain.
-    low <- log2(low)
-    high <- log2(high)
-
-    tryCatch(
-        .Call('_frsrr_boundedStratifiedSample', PACKAGE = 'frsrr', n, low, high),
-        error = function(e) {
-            stop(e$message, call. = FALSE)
-        }
-    )
-}
-
 #' @rdname frsr_sample
 #' @export
 frsr_sample <- function(n, 
@@ -102,7 +78,9 @@ frsr_sample <- function(n,
     } else if (is.null(x_max)) {
         rep(x_min, n)  # Use x_min if x_max is NULL
     } else {
-        boundedStratifiedSample(n, x_min, x_max)
+        .Call('_frsrr_boundedStratifiedSample',
+              PACKAGE = 'frsrr',
+              n, log2(x_min), log2(x_max))
     }
   
     # Call frsr with generated inputs and parameters

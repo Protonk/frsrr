@@ -20,4 +20,5 @@ LinkingTo:
     RcppParallel
 Suggests: 
     testthat (>= 3.0.0)
+SystemRequirements: C++20
 Config/testthat/edition: 3

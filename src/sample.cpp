@@ -2,6 +2,7 @@
 #include <cmath>
 #include <random>
 #include <stdexcept>
+#include <algorithm>
 
 // Utility functions
 inline uint32_t ToBits(float f) { return std::bit_cast<uint32_t>(f); }
