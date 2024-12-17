@@ -24,11 +24,23 @@
 #' numbers much higher or lower requiring more iterations to converge or
 #' not converging at all.
 #'
+#' Floating point values are searched by stratified sampling 
+#' which samples uniformly within exponent ranges, as that is how
+#' floating point numbers are distributed. The default range is 
+#' chosen because the the error of the FISR along \eqn{2^-2} and \eqn{2^0}
+#' repeats over the whole range of the function.
+#'
 #' @return A data frame with the sampled values and optional details from \code{frsr}.
 #' 
 #' @seealso 
 #' 
 #' \code{\link{frsr}}
+#'
+#' @references
+#'
+#' Walker, A. J. (1974) Fast generation of uniformly distributed pseudorandom numbers with floating-point representation. Electronics Letters, 10, 533-534, \url{https://api.semanticscholar.org/CorpusID:110056594}
+#'
+#' Pharr, M. (2022) Sampling in Floating Point (2/3): 1D Intervals. Matt Pharr's Blog, \url{https://pharr.org/matt/blog/2022/03/14/sampling-float-intervals}
 #'
 #' @examples 
 #' 
@@ -47,7 +59,23 @@
 #' @name frsr_sample
 NULL
 
-#' @rdname frsr_sample
+boundedStratifiedSample <- function(n, low, high) {
+    if (n <= 0 || is.integer(n)) {
+        stop("'n' must be a positive integer")
+    }
+    ## Our C++ algorithm works with exponents,
+    ## but expressing that for a user is a pain.
+    low <- log2(low)
+    high <- log2(high)
+
+    tryCatch(
+        .Call('_frsrr_boundedStratifiedSample', PACKAGE = 'frsrr', n, low, high),
+        error = function(e) {
+            stop(e$message, call. = FALSE)
+        }
+    )
+}
+
 #' @export
 frsr_sample <- function(n, 
                         magic_min = 1596980000L, magic_max = 1598050000L, 
@@ -78,49 +106,4 @@ frsr_sample <- function(n,
          NRmax = NRmax, tol = tol,
          A = A, B = B,
          keep_params = keep_params, detail = TRUE)
-}
-
-
-#' Bounded stratified sampling of positive floating point numbers
-#'
-#' @param n Number of samples to generate.
-#' @param low Lower bound of the range.
-#' @param high Upper bound of the range.
-#'
-#' @return A numeric vector of length \code{n} with samples along the range
-#' 
-#' @details
-#'
-#' Floating point values are searched by stratified sampling 
-#' which samples uniformly within exponent ranges, as that is how
-#' floating point numbers are distributed. The default range is 
-#' chosen because the the error of the FISR along \eqn{2^-2} and \eqn{2^0}
-#' repeats over the whole range of the function.
-#'
-#' @references
-#'
-#' Walker, A. J. (1974) Fast generation of uniformly distributed pseudorandom numbers with floating-point representation. Electronics Letters, 10, 533-534, \url{https://api.semanticscholar.org/CorpusID:110056594}
-#'
-#' Pharr, M. (2022) Sampling in Floating Point (2/3): 1D Intervals. Matt Pharr's Blog, \url{https://pharr.org/matt/blog/2022/03/14/sampling-float-intervals}
-#'
-#' @name boundedStratifiedSample
-NULL
-
-#' @rdname frsr_sample
-#' @export
-boundedStratifiedSample <- function(n, low, high) {
-    if (n <= 0 || is.integer(n)) {
-        stop("'n' must be a positive integer")
-    }
-    ## Our C++ algorithm works with exponents,
-    ## but expressing that for a user is a pain.
-    low <- log2(low)
-    high <- log2(high)
-
-    tryCatch(
-        .Call('_frsrr_boundedStratifiedSample', PACKAGE = 'frsrr', n, low, high),
-        error = function(e) {
-            stop(e$message, call. = FALSE)
-        }
-    )
 }
