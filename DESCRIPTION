@@ -1,12 +1,12 @@
 Package: frsrr
 Type: Package
 Title: A Customizable Fast Reciprocal Square Root
-Version: 0.5.5
+Version: 0.5.9
 Authors@R: person(given = "Adam",
                   family = "Hyland",
                   role = c("aut", "cre"),
                   email = "0x5f37642f@protonmail.com")
-Description: Vary parameters and test performance of the Fast Reciprocal Square Root, more famously known as the Fast Inverse Square Root.
+Description: Sample parameters and test performance of the Fast Reciprocal Square Root, more famously known as the Fast Inverse Square Root.
 URL: https://github.com/Protonk/frsrr
 License: MIT + file LICENSE
 Encoding: UTF-8

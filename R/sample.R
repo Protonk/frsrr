@@ -1,17 +1,48 @@
+#' @useDynLib frsrr, .registration = TRUE
+#' @importFrom Rcpp sourceCpp
+NULL
+
+
+#' Bounded stratified sampling of positive floating point numbers
+#'
+#' This function is not exported and is intended for internal use only.
+#' @details
+#'
+#' Samples uniformly within exponent ranges to draw unbiased samples
+#' between the exponent ranges of the input. The C++ code uses
+#' debiased exponents as input, we pass those by taking logs.
+#'
+#' @keywords internal
+#' @name boundedStratifiedSample
+NULL
+
+boundedStratifiedSample <- function(n, low, high) {
+    if (n <= 0 || is.integer(n)) {
+        stop("'n' must be a positive integer")
+    }
+    ## Our C++ algorithm works with exponents,
+    ## but expressing that for a user is a pain.
+    low <- log2(low)
+    high <- log2(high)
+
+    tryCatch(
+        .Call('_frsrr_boundedStratifiedSample', PACKAGE = 'frsrr', n, low, high),
+        error = function(e) {
+            stop(e$message, call. = FALSE)
+        }
+    )
+}
+
 #' Sample FRSR
 #'
 #' Generate samples for the Fast Reciprocal Square Root (FRSR) algorithm.
 #'
-#' @param n: Number of samples to generate.
-#' @param magic_min: Minimum value for the magic number range. Default is \code{1596980000L}
-#' @param magic_max: Maximum value for the magic number range. Default is \code{1598050000L}
-#' @param x_min: Minimum value for the input range. Default is \code{0.25}
-#' @param x_max: Maximum value for the input range. Default is \code{1.0}
-#' @param NRmax: Maximum iterations for the Newton-Raphson method. Default is \code{1}
-#' @param A: Parameter A for the iteration formula. Default is \code{1.5}
-#' @param B: Parameter B for the iteration formula. Default is \code{0.5}
-#' @param tol: Tolerance level for stopping. Default is \code{0}
-#' @param keep_params: Logical indicating whether to output parameters. Default is \code{FALSE}.
+#' @param n Number of samples to generate.
+#' @param magic_min Minimum value for the magic number range. Default is \code{1596980000L}
+#' @param magic_max Maximum value for the magic number range. Default is \code{1598050000L}
+#' @param x_min Minimum value for the input range. Default is \code{0.25}
+#' @param x_max Maximum value for the input range. Default is \code{1.0}
+#' @param ... Additional arguments passed to \code{frsr}.
 #'
 #' @details 
 #' 
@@ -23,8 +54,8 @@
 #' Floating point values are searched by stratified sampling 
 #' which samples uniformly within exponent ranges, as that is how
 #' floating point numbers are distributed. The default range is 
-#' chosen because the the error of the FISR along \eqn{2^-2} and \eqn{2^0}
-#' repeats over the whole range of the function.
+#' chosen because the the error of the FISR is periodic 
+#' from 0.25 to 1.0.
 #'
 #' @return A data frame with the sampled values and optional details from \code{frsr}.
 #' 
@@ -59,10 +90,7 @@ NULL
 #' @export
 frsr_sample <- function(n, 
                         magic_min = 1596980000L, magic_max = 1598050000L, 
-                        x_min = 0.25, x_max = 1.0,
-                        NRmax = 1, A = 1.5, B = 0.5,
-                        tol = 0,
-                        keep_params = FALSE) {
+                        x_min = 0.25, x_max = 1.0, ...) {
     # Determine magic numbers based on whether magic_min or magic_max is NULL
     magic_numbers <- if (is.null(magic_min)) {
         rep(magic_max, n)  # Use magic_max if magic_min is NULL
@@ -71,21 +99,15 @@ frsr_sample <- function(n,
     } else {
         sample(magic_min:magic_max, n, replace = TRUE)
     }
-    
     # Determine inputs based on whether x_min or x_max is NULL
     inputs <- if (is.null(x_min)) {
         rep(x_max, n)  # Use x_max if x_min is NULL
     } else if (is.null(x_max)) {
         rep(x_min, n)  # Use x_min if x_max is NULL
     } else {
-        .Call('_frsrr_boundedStratifiedSample',
-              PACKAGE = 'frsrr',
-              n, log2(x_min), log2(x_max))
+        boundedStratifiedSample(n, x_min, x_max)
     }
   
     # Call frsr with generated inputs and parameters
-    frsr(x = inputs, magic = magic_numbers,
-         NRmax = NRmax, tol = tol,
-         A = A, B = B,
-         keep_params = keep_params, detail = TRUE)
+    frsr(x = inputs, magic = magic_numbers, detail = TRUE, ...)
 }

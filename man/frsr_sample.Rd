@@ -10,33 +10,21 @@ frsr_sample(
   magic_max = 1598050000L,
   x_min = 0.25,
   x_max = 1,
-  NRmax = 1,
-  A = 1.5,
-  B = 0.5,
-  tol = 0,
-  keep_params = FALSE
+  ...
 )
 }
 \arguments{
-\item{n:}{Number of samples to generate.}
+\item{n}{Number of samples to generate.}
 
-\item{magic_min:}{Minimum value for the magic number range. Default is \code{1596980000L}}
+\item{magic_min}{Minimum value for the magic number range. Default is \code{1596980000L}}
 
-\item{magic_max:}{Maximum value for the magic number range. Default is \code{1598050000L}}
+\item{magic_max}{Maximum value for the magic number range. Default is \code{1598050000L}}
 
-\item{x_min:}{Minimum value for the input range. Default is \code{0.25}}
+\item{x_min}{Minimum value for the input range. Default is \code{0.25}}
 
-\item{x_max:}{Maximum value for the input range. Default is \code{1.0}}
+\item{x_max}{Maximum value for the input range. Default is \code{1.0}}
 
-\item{NRmax:}{Maximum iterations for the Newton-Raphson method. Default is \code{1}}
-
-\item{A:}{Parameter A for the iteration formula. Default is \code{1.5}}
-
-\item{B:}{Parameter B for the iteration formula. Default is \code{0.5}}
-
-\item{tol:}{Tolerance level for stopping. Default is \code{0}}
-
-\item{keep_params:}{Logical indicating whether to output parameters. Default is \code{FALSE}.}
+\item{...}{Additional arguments passed to \code{frsr}.}
 }
 \value{
 A data frame with the sampled values and optional details from \code{frsr}.
@@ -53,8 +41,8 @@ not converging at all.
 Floating point values are searched by stratified sampling 
 which samples uniformly within exponent ranges, as that is how
 floating point numbers are distributed. The default range is 
-chosen because the the error of the FISR along \eqn{2^-2} and \eqn{2^0}
-repeats over the whole range of the function.
+chosen because the the error of the FISR is periodic 
+from 0.25 to 1.0.
 }
 \examples{
 
