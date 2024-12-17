@@ -2,7 +2,6 @@
 #include <cmath>
 #include <random>
 #include <stdexcept>
-#include <algorithm>
 
 // Utility functions
 inline uint32_t ToBits(float f) { return std::bit_cast<uint32_t>(f); }
@@ -12,10 +11,6 @@ constexpr int SignificandMask = (1 << 23) - 1;
 
 // [[Rcpp::export]]
 Rcpp::NumericVector boundedStratifiedSample(int n, double low, double high) {
-
-    if (low > high) {
-        std::swap(low, high);
-    }
 
     if (low < -126) {
         throw std::invalid_argument("Subnormal numbers are not supported. 'low' must be >= -126");

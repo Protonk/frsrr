@@ -2,22 +2,18 @@
 #'
 #' Generate samples for the Fast Reciprocal Square Root (FRSR) algorithm.
 #'
-#' @param n Number of samples to generate.
-#' @param magic_min Minimum value for the magic number range. Default is \code{1596980000L}.
-#' @param magic_max Maximum value for the magic number range. Default is \code{1598050000L}.
-#' @param x_min Minimum value for the input range. Default is \code{0.25}.
-#' @param x_max Maximum value for the input range. Default is \code{1.0}.
+#' @param n: Number of samples to generate.
+#' @param magic_min: Minimum value for the magic number range. Default is \code{1596980000L}
+#' @param magic_max: Maximum value for the magic number range. Default is \code{1598050000L}
+#' @param x_min: Minimum value for the input range. Default is \code{0.25}
+#' @param x_max: Maximum value for the input range. Default is \code{1.0}
+#' @param NRmax: Maximum iterations for the Newton-Raphson method. Default is \code{1}
+#' @param A: Parameter A for the iteration formula. Default is \code{1.5}
+#' @param B: Parameter B for the iteration formula. Default is \code{0.5}
+#' @param tol: Tolerance level for stopping. Default is \code{0}
+#' @param keep_params: Logical indicating whether to output parameters. Default is \code{FALSE}.
 #'
-#' @details The following parameters are passed to \code{\link{frsr}}:
-#'
-#' \itemize{
-#'  \item{\code{"NRmax"}: Maximum iterations for the Newton-Raphson method. Default is \code{1}}
-#'  \item{\code{"A"}: Parameter A for the iteration formula. Default is \code{1.5}}
-#'  \item{\code{"B"}: Parameter B for the iteration formula. Default is \code{0.5}}
-#'  \item{\code{"tol"}: Tolerance level for stopping. Default is \code{0}}
-#'  \item{\code{"keep_params"}: Logical indicating whether to output parameters. Default is \code{FALSE}.}
-#' }
-#'
+#' @details 
 #' 
 #' The default range for the magic number was determined by experiment.
 #' Values within this range are relatively good restoring constants, with
@@ -63,6 +59,13 @@ boundedStratifiedSample <- function(n, low, high) {
     if (n <= 0 || is.integer(n)) {
         stop("'n' must be a positive integer")
     }
+    # swap low and high if low > high rather than bug the user
+    if (low > high) {
+        temp <- high
+        high <- low
+        low <- temp
+    }
+    
     ## Our C++ algorithm works with exponents,
     ## but expressing that for a user is a pain.
     low <- log2(low)
@@ -76,6 +79,7 @@ boundedStratifiedSample <- function(n, low, high) {
     )
 }
 
+#' @rdname frsr_sample
 #' @export
 frsr_sample <- function(n, 
                         magic_min = 1596980000L, magic_max = 1598050000L, 

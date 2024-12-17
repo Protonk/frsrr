@@ -1,7 +1,7 @@
 Package: frsrr
 Type: Package
 Title: A Customizable Fast Reciprocal Square Root
-Version: 0.5.2
+Version: 0.5.3
 Authors@R: person(given = "Adam",
                   family = "Hyland",
                   role = c("aut", "cre"),
@@ -20,5 +20,4 @@ LinkingTo:
     RcppParallel
 Suggests: 
     testthat (>= 3.0.0)
-SystemRequirements: C++20
 Config/testthat/edition: 3

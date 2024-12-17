@@ -3,12 +3,15 @@
 \name{customNR}
 \alias{customNR}
 \title{Custom Newton-Raphson Formula Tools}
+\usage{
+customNR(x, magic = 1597463007, formula, NRmax = 1, tol = 0)
+}
 \arguments{
 \item{x}{A numeric vector of input values.}
 
-\item{formula}{A custom formula as a function of \code{y} and \code{x}.}
-
 \item{magic}{An optional magic number for the initial guess.}
+
+\item{formula}{A custom formula as a function of \code{y} and \code{x}.}
 
 \item{NRmax}{Number of iterations to perform. Default is \code{1}.}
 

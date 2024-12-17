@@ -51,6 +51,7 @@ ynplusone <- function(x, guess, formula) {
   f(y, x)
 }
 
+#' @rdname customNR
 #' @export
 customNR <- function(x, magic = 0x5f3759df, formula, NRmax = 1, tol = 0) {
   y <- frsr(x, magic, NRmax = 0)

@@ -3,16 +3,40 @@
 \name{frsr_sample}
 \alias{frsr_sample}
 \title{Sample FRSR}
+\usage{
+frsr_sample(
+  n,
+  magic_min = 1596980000L,
+  magic_max = 1598050000L,
+  x_min = 0.25,
+  x_max = 1,
+  NRmax = 1,
+  A = 1.5,
+  B = 0.5,
+  tol = 0,
+  keep_params = FALSE
+)
+}
 \arguments{
-\item{n}{Number of samples to generate.}
+\item{n:}{Number of samples to generate.}
 
-\item{magic_min}{Minimum value for the magic number range. Default is \code{1596980000L}.}
+\item{magic_min:}{Minimum value for the magic number range. Default is \code{1596980000L}}
 
-\item{magic_max}{Maximum value for the magic number range. Default is \code{1598050000L}.}
+\item{magic_max:}{Maximum value for the magic number range. Default is \code{1598050000L}}
 
-\item{x_min}{Minimum value for the input range. Default is \code{0.25}.}
+\item{x_min:}{Minimum value for the input range. Default is \code{0.25}}
 
-\item{x_max}{Maximum value for the input range. Default is \code{1.0}.}
+\item{x_max:}{Maximum value for the input range. Default is \code{1.0}}
+
+\item{NRmax:}{Maximum iterations for the Newton-Raphson method. Default is \code{1}}
+
+\item{A:}{Parameter A for the iteration formula. Default is \code{1.5}}
+
+\item{B:}{Parameter B for the iteration formula. Default is \code{0.5}}
+
+\item{tol:}{Tolerance level for stopping. Default is \code{0}}
+
+\item{keep_params:}{Logical indicating whether to output parameters. Default is \code{FALSE}.}
 }
 \value{
 A data frame with the sampled values and optional details from \code{frsr}.
@@ -21,17 +45,6 @@ A data frame with the sampled values and optional details from \code{frsr}.
 Generate samples for the Fast Reciprocal Square Root (FRSR) algorithm.
 }
 \details{
-The following parameters are passed to \code{\link{frsr}}:
-
-\itemize{
- \item{\code{"NRmax"}: Maximum iterations for the Newton-Raphson method. Default is \code{1}}
- \item{\code{"A"}: Parameter A for the iteration formula. Default is \code{1.5}}
- \item{\code{"B"}: Parameter B for the iteration formula. Default is \code{0.5}}
- \item{\code{"tol"}: Tolerance level for stopping. Default is \code{0}}
- \item{\code{"keep_params"}: Logical indicating whether to output parameters. Default is \code{FALSE}.}
-}
-
-
 The default range for the magic number was determined by experiment.
 Values within this range are relatively good restoring constants, with
 numbers much higher or lower requiring more iterations to converge or
