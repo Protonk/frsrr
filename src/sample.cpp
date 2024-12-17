@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <algorithm>
 
+using namespace Rcpp;
+
 // Utility functions
 inline uint32_t ToBits(float f) { return std::bit_cast<uint32_t>(f); }
 inline float FromBits(uint32_t b) { return std::bit_cast<float>(b); }
@@ -11,13 +13,13 @@ inline int Exponent(float f) { return ((ToBits(f) >> 23) & 0xff) - 127; }
 constexpr int SignificandMask = (1 << 23) - 1;
 
 // [[Rcpp::export]]
-Rcpp::NumericVector boundedStratifiedSample(int n, double low, double high) {
+NumericVector boundedStratifiedSample(int n, double low, double high) {
 
     if (low < -126) {
         throw std::invalid_argument("Subnormal numbers are not supported. 'low' must be >= -126");
     }
     
-    Rcpp::NumericVector result(n);
+    NumericVector result(n);
     
     std::random_device rd;
     std::mt19937 gen(rd());
