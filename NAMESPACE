@@ -2,7 +2,9 @@
 
 export(customNR)
 export(frsr)
+export(frsr_bin)
 export(frsr_sample)
 importFrom(Rcpp,sourceCpp)
 importFrom(RcppParallel,RcppParallelLibs)
+importFrom(stats,aggregate)
 useDynLib(frsrr, .registration = TRUE)

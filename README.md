@@ -15,6 +15,7 @@ I like R! R doesn't have a type for 32 bit floats, so I wanted a way to mess wit
 - Optional detailed output including initial approximation, intermediate steps, and error metrics
 - Ability to run the frsr with a custom iteration formula, specified in R formula syntax
 - Sampler to ease sampling over parameter ranges.
+- Find optimal magic constants for ranges of floating point numbers quickly.
 
 ## Installation
 
