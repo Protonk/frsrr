@@ -35,31 +35,30 @@
 #' \donttest{
 #' x <- c(1, 4, 9, 16)
 #' ex_formula <- quote(y * (1.5 - 0.5 * x * y^2))
-#' result <- customNR(x, formula = ex_formula)
+#' result <- frsr_NR(x, formula = ex_formula)
 #' print(result$final)
 #' # [1] 0.9990148 0.4995074 0.3337626 0.2497537
 #' }
 #' 
-#' @name customNR
+#' @name frsr_NR
 NULL
 
-ynplusone <- function(x, guess, formula) {
-  y <- guess
-  # Parse the formula
-  f <- as.function(alist(y=, x=, eval(formula)))
-  # Newton-Raphson iteration
-  f(y, x)
-}
-
-#' @rdname customNR
+#' @rdname frsr_NR
 #' @export
-customNR <- function(x, magic = 0x5f3759df, formula, NRmax = 1, tol = 0) {
+frsr_NR <- function(x, magic = 0x5f3759df, formula, NRmax = 1, tol = 0) {
   y <- frsr(x, magic, NRmax = 0)
   reference <- 1 / sqrt(x)
   iter <- 0
   initial <- y
   error_initial <- abs(initial - reference) / reference
-  
+  ynplusone <- function(x, guess, formula) {
+    y <- guess
+    # Parse the formula
+    f <- as.function(alist(y=, x=, eval(formula)))
+    # Newton-Raphson iteration
+    f(y, x)
+  }
+
   # Iterate until NRmax is reached or error is below tol
   while (iter < NRmax) {
     new_y <- ynplusone(x, y, formula)

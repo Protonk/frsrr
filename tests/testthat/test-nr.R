@@ -17,24 +17,24 @@ test_that("ynplusone works with different formulae", {
     expect_false(isTRUE(abs(wrong - std_result) < 1e-3))
 })
 
-test_that("customNR works with default parameters", {
+test_that("frsr_NR works with default parameters", {
     x <- c(1, 4, 9, 16)
     formula <- quote(y * (1.5 - 0.5 * x * y^2))
-    result <- customNR(x, formula = formula)
+    result <- frsr_NR(x, formula = formula)
     expect_equal(result$final, frsr(x), tolerance = 1e-2)
 })
 
-test_that("customNR works with multiple iterations", {
+test_that("frsr_NR works with multiple iterations", {
     x <- c(1, 4, 9, 16)
     formula <- quote(y * (1.5 - 0.5 * x * y^2))
-    result <- customNR(x, formula = formula, NRmax = 5)
+    result <- frsr_NR(x, formula = formula, NRmax = 5)
     expect_equal(result$final, frsr(x, NRmax = 5), tolerance = 1e-3)
 })
 
-test_that("customNR produces expected output structure", {
+test_that("frsr_NR produces expected output structure", {
     x <- c(1, 4, 9, 16)
     formula <- quote(y * (1.5 - 0.5 * x * y^2))
-    result <- customNR(x, formula = formula)
+    result <- frsr_NR(x, formula = formula)
     expect_s3_class(result, "data.frame")
     expect_equal(nrow(result), length(x))
 })

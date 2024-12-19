@@ -26,6 +26,10 @@ Install the package from GitHub using the `devtools` package:
 devtools::install_github("Protonk/frsrr")
 ```
 
+## Our friends the robots
+
+This project was built with the (paid) assistance of an AI tool, [Perplexity AI](https://www.perplexity.ai/). The AI assisted with writing code, understanding the R package development process, and writing C++ code (which is a language I've never written in). 
+
 ### Usage
 
 ```R
