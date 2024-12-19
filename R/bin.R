@@ -1,6 +1,3 @@
-#' @importFrom stats aggregate
-NULL
-
 #' FRSR Bin
 #'
 #' Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins.
@@ -27,11 +24,11 @@ NULL
 #' This function divides the range [x_min, x_max] into n_bins bins and generates float_samples
 #' floating-point samples within each bin. It then tests magic_samples magic constants within
 #' the range [magic_min, magic_max] to find the optimal magic constant for each bin that minimizes
-#' the relative error in the Fast Reciprocal Square Root algorithm.
+#' the sum relative error per bin. The achievable error and optimal constants will change with
+#' bin size and number of bins, as well as the integer and float samples. 
 #' 
-#' The FRSR is periodic over 0.25 to 1.0 WITH the magic
-#' constant of 0x5f3759df. I don't know if this is
-#' generally true.
+#' The FRSR is periodic over 0.25 to 1.0 WITH the magic constant of 0x5f3759df. I don't know if 
+#' this is generally true.
 #' 
 #' @examples
 #' \donttest{
@@ -49,43 +46,36 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
                      float_samples = 1024, magic_samples = 2048,
                      magic_min = 1596980000L,
                      magic_max = 1598050000L) {
-
-  # Calculate bin edges
-  bin_edges <- n_bins + 1
-  for (i in 0:n_bins) {
-    bin_edges[i + 1] <- 2^((log2(x_min) + i * (log2(x_max) - log2(x_min)) / n_bins))
-  }
-
-  # Generate stratified samples for each bin and compute results
+  
+  # Calculate bin edges (logarithmic spacing)
+  bin_edges <- 2^seq(log2(x_min), log2(x_max), length.out = n_bins + 1)
+  
+  # Generate results for each bin
   bins <- lapply(seq_len(n_bins), function(i) {
-    samples <- .Call('_frsrr_boundedStratifiedSample', PACKAGE = 'frsrr',
-                     float_samples,
-                     log2(bin_edges[i]), log2(bin_edges[i + 1]))
-    magic <- sample(magic_min:magic_max, magic_samples, replace = TRUE)
-    ## this could become large
-    input_df <- expand.grid(samples, magic)
-    names(input_df) <- c("float", "magic")
-    # frsr is parallel C++, so this is spread out as well as is reasonable.
-    input_df$error <- frsr(x = input_df[, "float"], magic = input_df[, "magic"],
-                           NRmax = NRmax, tol = 0, detail = TRUE)$error
-    input_df <- input_df[, c("magic", "error")]
+    
+    # Generate stratified floating-point samples within the bin range
+    floats <- .Call('_frsrr_boundedStratifiedSample', PACKAGE = 'frsrr',
+                    float_samples,
+                    log2(bin_edges[i]), log2(bin_edges[i + 1]))
+    
+    # Generate random magic constants within the specified range
+    magics <- sample(magic_min:magic_max, size = magic_samples, replace = TRUE)
+    
 
-    # Summarise to calculate the sum of 'error' for each group
-    summed_errors <- aggregate(error ~ magic, data = input_df, sum)
-    # Find the row with the minimum summed error
-    result <- summed_errors[which.min(summed_errors$error), ]
-    error_sum <- result[, "error"]
-    best_magic <- result[, "magic"]
-
+    # Call the C++ function to compute optimal magic constant
+    result <- .Call('_frsrr_computeOptimalMagic', PACKAGE = 'frsrr',
+                    floats, magics, NRmax)
+    
+    # Return results as a data frame
     data.frame(
       Location = i,
       Range_Min = bin_edges[i],
       Range_Max = bin_edges[i + 1],
-      Magic = best_magic,
-      # Don't bias smaller float samples
-      Sum_Error = error_sum / float_samples
+      Magic = result$magic,
+      Sum_Error = result$error / float_samples
     )
   })
-  # Combine all bins into a single data frame
-  cbind(data.frame(Bins = n_bins), do.call(rbind, bins))
+  
+  # Combine results from all bins into a single data frame
+  do.call(rbind, bins)
 }

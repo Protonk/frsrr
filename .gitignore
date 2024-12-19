@@ -3,12 +3,10 @@
 .RData
 .Ruserdata
 .DS_Store
-src/frsr.o
-src/frsrr.so
 frsrr.Rproj
-src/RcppExports.o
 R/RcppExports.R
 src/RcppExports.cpp
 .vscode/settings.json
-src/sample.o
 man/*
+src/*.so
+src/*.o
