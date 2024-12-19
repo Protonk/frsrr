@@ -9,4 +9,3 @@ test_that("frsr_bin handles different number of bins", {
   result <- frsr_bin(n_bins = 8, float_samples = 10, magic_samples = 10)
   expect_equal(nrow(result), 8)
 })
-

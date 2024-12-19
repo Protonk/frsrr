@@ -1,3 +1,8 @@
+#' @useDynLib frsrr, .registration = TRUE
+#' @importFrom Rcpp sourceCpp
+#' @importFrom RcppParallel RcppParallelLibs
+NULL
+
 #' FRSR Bin
 #'
 #' Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins.
@@ -27,7 +32,7 @@
 #' the sum relative error per bin. The achievable error and optimal constants will change with
 #' bin size and number of bins, as well as the integer and float samples. 
 #' 
-#' The FRSR is periodic over 0.25 to 1.0 WITH the magic constant of 0x5f3759df. I don't know if 
+#' The FRSR is periodic over 0.25 to 1.0 with a magic constant of 0x5f3759df. I don't know if 
 #' this is generally true.
 #' 
 #' @examples
@@ -35,6 +40,11 @@
 #' # Generate optimal magic constants for the range [0.25, 1.0] divided into 4 bins
 #' result <- frsr_bin()
 #' print(result)
+#' #   Location Range_Min Range_Max      Magic    Sum_Error N_bins
+#' # 1        1 0.2500000 0.3535534 1597413411 4.549199e-04      4
+#' # 2        2 0.3535534 0.5000000 1597115686 6.175506e-05      4
+#' # 3        3 0.5000000 0.7071068 1597150657 3.486200e-05      4
+#' # 4        4 0.7071068 1.0000000 1597488127 8.389181e-04      4
 #' # }
 #' @name frsr_bin
 NULL
@@ -77,5 +87,5 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
   })
   
   # Combine results from all bins into a single data frame
-  do.call(rbind, bins)
+  cbind(do.call(rbind, bins), data.frame(N_bins = n_bins))
 }
