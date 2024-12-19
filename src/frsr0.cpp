@@ -29,7 +29,7 @@ float frsr0(float x, uint32_t magic, int NRmax) {
     // exp(-1/2 * log2(x)) = 1/sqrt(x), so that's our approximation
     // to feed into Newton's method.
     float guess = y.f;
-    for (int i = 0; i <= NRmax; i++) {
+    for (int i = 0; i < NRmax; i++) {
         guess = guess * (1.5f - 0.5f * x * guess * guess);
     }
     return guess;
