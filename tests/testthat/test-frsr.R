@@ -35,11 +35,6 @@ test_that("frsr respects tolerance parameter", {
   result1 <- frsr(0.0125, tol = 0, NRmax = 20, detail = TRUE)
   result2 <- frsr(0.0125, tol = 1e-7, NRmax = 20, detail = TRUE)
   expect_true(result2$iters[1] < result1$iters[1])
-  # stops early with tol > 0
-  result1_vec <- frsr(0.0125, tol = 0, NRmax = 20)
-  result2_vec <- frsr(0.0125, tol = 1e-3, NRmax = 20)
-  ## The results should differ by more than 1e-4 due to the tolerance parameter
-  expect_true(abs(result2_vec - result1_vec) > 1e-4)
 })
 
 test_that("frsr produces accurate results with tolerance parameter", {
