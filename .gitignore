@@ -7,6 +7,5 @@ frsrr.Rproj
 R/RcppExports.R
 src/RcppExports.cpp
 .vscode/settings.json
-man/*
 src/*.so
 src/*.o
