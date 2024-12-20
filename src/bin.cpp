@@ -3,7 +3,7 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
-#include "frsr0.h"
+#include "frsr.h"
 
 using namespace Rcpp;
 using namespace RcppParallel;
