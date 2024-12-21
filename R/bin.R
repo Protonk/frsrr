@@ -60,24 +60,24 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
   bin_edges <- 2^seq(log2(x_min), log2(x_max), length.out = n_bins + 1)
   # Generate results for each bin
   bins <- lapply(seq_len(n_bins), function(i) {
-    # Generate stratified floating-point samples within the bin range
-    floats <- .Call('_frsrr_boundedStratifiedSample', PACKAGE = 'frsrr',
-                    float_samples,
-                    log2(bin_edges[i]), log2(bin_edges[i + 1]))
+    bin_min <- bin_edges[i]
+    bin_max <- bin_edges[i + 1]
+    # don't stratify because we're already binning by log2
+    # and the usual range is really just 2^-2 to 2^0
+    floats <- runif(float_samples, min = bin_min, max = bin_max)
     # Generate random magic constants within the specified range
     magics <- sample(magic_min:magic_max, size = magic_samples, replace = TRUE)
     # Call the C++ function to compute optimal magic constant
-    result <- .Call('_frsrr_computeOptimalMagic', PACKAGE = 'frsrr',
+    result <- .Call('_frsrr_optimal_constant_search', PACKAGE = 'frsrr',
                     floats, magics, NRmax)
     # Return results as a data frame
-    data.frame(
+    output <- data.frame(
       Location = i,
-      Range_Min = bin_edges[i],
-      Range_Max = bin_edges[i + 1],
-      Magic = result$magic,
-      Sum_Error = result$error / float_samples
+      Range_Min = bin_min,
+      Range_Max = bin_max
     )
+    result <- cbind(output, result)
   })
   # Combine results from all bins into a single data frame
-  cbind(do.call(rbind, bins), data.frame(N_bins = n_bins))
+  cbind(do.call(rbind, bins), data.frame(N = n_bins))
 }
