@@ -5,7 +5,8 @@ NULL
 
 #' FRSR Bin
 #'
-#' Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins.
+#' Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins
+#' by minimizing the maximum relative error. 
 #'
 #' @param x_min Numeric. Default is 0.25.
 #' @param x_max Numeric. Default is 1.0.
@@ -23,17 +24,19 @@ NULL
 #'     \item{Range_Min}{Minimum value of the bin range}
 #'     \item{Range_Max}{Maximum value of the bin range}
 #'     \item{Magic}{Optimal magic constant as an integer}
-#'     \item{Max_Relative_Error}{Maximum relative error for each bin}
+#'     \item{Max_Relative_Error}{Minimum max relative error for the bin}
+#'     \item{Avg_Relative_Error}{Average relative error associated with minimax magic constant}
 #'
 #' @details
 #' This function divides the range [x_min, x_max] into n_bins bins and generates float_samples
 #' floating-point samples within each bin. It then tests magic_samples magic constants within
 #' the range [magic_min, magic_max] to find the optimal magic constant for each bin that minimizes
-#' the sum relative error per bin. The achievable error and optimal constants will change with
+#' the maximum relative error per bin. The achievable error and optimal constants will change with
 #' bin size and number of bins, as well as the integer and float samples. 
 #' 
 #' The FRSR is periodic over 0.25 to 1.0 with a magic constant of 0x5f3759df. I don't know if 
-#' this is generally true.
+#' this is generally true. Interestingly, the linear approximation to the logarithm used is
+#' periodic over integral powers of two, and so loops twice before the FISR does once.
 #' 
 #' @examples
 #' \donttest{

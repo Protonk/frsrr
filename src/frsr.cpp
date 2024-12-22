@@ -80,6 +80,7 @@ struct FRSRWorker : public Worker {
 
             if (NRmax[j] == 0) {
                 // When NRmax is 0, skip Newton-Raphson iterations
+                // but write conforming results
                 res.after_one[j] = NA_REAL;
                 res.final[j] = y;
                 res.diff[j] = NA_REAL;
@@ -99,6 +100,8 @@ struct FRSRWorker : public Worker {
                     // storing all of them.
                     res.diff[j] = y - prev_y;
                     rel_error = std::abs(y - reference) / reference;
+                    // exit early if we are within tolerance & 
+                    // tolerance argument is set
                     if (tol[j] > 0 && rel_error <= tol[j]) break;
                 }
             }

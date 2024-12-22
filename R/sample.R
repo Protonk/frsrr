@@ -74,9 +74,8 @@ frsr_sample <- function(n,
     } else if (is.null(x_max)) {
         rep(x_min, n)  # Use x_min if x_max is NULL
     } else {
-        .Call('_frsrr_boundedStratifiedSample', PACKAGE = 'frsrr', n, log2(x_min), log2(x_max))
+    exp(runif(n, log2(x_min), log2(x_max)))
     }
-  
     # Call frsr with generated inputs and parameters
     frsr(x = inputs, magic = magic_numbers, detail = TRUE, ...)
 }
