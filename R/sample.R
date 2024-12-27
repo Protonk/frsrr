@@ -26,7 +26,7 @@ NULL
 #' chosen because the the error of the FISR is periodic 
 #' from 0.25 to 1.0.
 #'
-#' @return A data frame with the sampled values and optional details from \code{frsr}.
+#' @return A data frame with sampled values and optional details from \code{frsr}.
 #' 
 #' @seealso 
 #' 
@@ -74,7 +74,10 @@ frsr_sample <- function(n,
     } else if (is.null(x_max)) {
         rep(x_min, n)  # Use x_min if x_max is NULL
     } else {
-    exp(runif(n, log2(x_min), log2(x_max)))
+    # The C++ stratified sampler works; it's easy to use and forget about
+    .Call('_frsrr_boundedStratifiedSample',
+          PACKAGE = 'frsrr',
+          n, log2(x_min), log2(x_max))
     }
     # Call frsr with generated inputs and parameters
     frsr(x = inputs, magic = magic_numbers, detail = TRUE, ...)
