@@ -27,7 +27,7 @@ frsr_sample(
 \item{...}{Additional arguments passed to \code{frsr}.}
 }
 \value{
-A data frame with the sampled values and optional details from \code{frsr}.
+A data frame with sampled values and optional details from \code{frsr}.
 }
 \description{
 Generate samples for the Fast Reciprocal Square Root (FRSR) algorithm.

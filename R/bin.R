@@ -82,8 +82,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     output <- data.frame(
       Location = i,
       Range_Min = bin_min,
-      Range_Max = bin_max,
-      Bin_Type = bin_type
+      Range_Max = bin_max
     )
     cbind(output, result)
   })
