@@ -73,9 +73,7 @@ kable(bins, format = "simple")
 
 ## FISR or FRSR?
 
-When the FRSR became famous (and only then), it was referred to as an inverse, meaning "[multiplicative inverse](https://en.wikipedia.org/wiki/Multiplicative_inverse)". In both the original source of Quake's FRSR was the "reciproot" tucked away in [a math library since 1986](https://www.netlib.org/fdlibm/e_sqrt.c) and in one of the first software libraries written by Alan Turing, D.G. Prinz, and Cecily Poppelwell 1/sqrt(x) is the "reciproot" as well. 
-
-Mike Day argues for the name FRSR in his [2023 generalization of the FRSR](https://arxiv.org/abs/2307.15600) to support any rational power or precision of base (including infinite precision). I think he's right. Fame has an interia all its own, so we shall see which name prevails.
+When the FRSR became famous (and only then), it was referred to as an inverse, meaning "[multiplicative inverse](https://en.wikipedia.org/wiki/Multiplicative_inverse)". In both the original source of Quake's FRSR tucked away in [a math library since 1986](https://www.netlib.org/fdlibm/e_sqrt.c) and one of the first software libraries ever written (by Alan Turing, D.G. Prinz, and Cecily Poppelwell) 1/sqrt(x) is the "[reciproot](https://0x5f37642f.com/documents/ManchesterRecipRoot.pdf)". Mike Day also argues for the name FRSR in his [2023 generalization of the FRSR](https://arxiv.org/abs/2307.15600) to support any rational power or precision of base (including infinite precision). Fame has an interia all its own, so we shall see which name prevails.
 
 ## Our friends the robots
 
