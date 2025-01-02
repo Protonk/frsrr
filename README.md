@@ -11,11 +11,11 @@ I like R! R doesn't have a type for 32 bit floats, so I wanted a way to mess wit
 ## Features
 
 - Customizable parameters for fine-tuning accuracy and performance (or the reverse)
-- C++ parallel implementation for speed so you can get the wrong answer faster.
+- C++ parallel implementation for speed so you can get the wrong answer faster
+- Fast sampler to ease sampling over parameter ranges
 - Optional detailed output including initial approximation, intermediate steps, and error metrics
 - Ability to run the frsr with a custom iteration formula, specified in R formula syntax
-- Sampler to ease sampling over parameter ranges.
-- Find optimal magic constants for ranges of floating point numbers quickly.
+- Bin input range and compute optimal magic constants for each bin, if efficiency really isn't your thing.
 
 ## Installation
 
@@ -26,17 +26,7 @@ Install the package from GitHub using the `devtools` package:
 devtools::install_github("Protonk/frsrr")
 ```
 
-## FISR or FRSR?
-
-When the FRSR became famous (and only then), it was referred to as an inverse, meaning "[multiplicative inverse](https://en.wikipedia.org/wiki/Multiplicative_inverse)". In both the original source of Quake's FRSR was the "reciproot" tucked away in [a math library since 1986](https://www.netlib.org/fdlibm/e_sqrt.c) and in one of the first software libraries written by Alan Turing, D.G. Prinz, and Cecily Poppelwell 1/sqrt(x) is the "reciproot" as well. 
-
-Mike Day argues for the name FRSR in his [2023 generalization of the FRSR](https://arxiv.org/abs/2307.15600) to support any rational power or precision of base (including infinite precision). I think he's right. Fame has an interia all its own, so we shall see which name prevails.
-
-## Our friends the robots
-
-This project was built with the (paid) assistance of an AI tool, [Perplexity AI](https://www.perplexity.ai/). The AI assisted with writing code, understanding the R package development process, and writing C++ code (which is a language I've never written in). 
-
-### Usage
+## Usage
 
 ```R
 library(frsrr)
@@ -47,7 +37,7 @@ result <- frsr(c(1, 4, 9, 16), magic = 0x5f375a86, NRmax = 2, A = 1.6, B = 0.6)
 print(result)
 # [1] 0.9990148 0.4995074 0.3337626 0.2497537
 
-# Optional detail
+# Optional detail 
 result.df <- frsr(c(pi, 2^-31, 0.4, 6.02e23), detail = TRUE)
 ## result.df is a dataframe with 4 rows and 7 columns
 print(result)
@@ -57,9 +47,10 @@ print(result)
 # 3 4.000000e-01 1.632430e+00 1.578616e+00 1.578616e+00 0.0015955754 -5.381417e-02     1
 # 4 6.020000e+23 1.306493e-12 1.288484e-12 1.288484e-12 0.0002824810 -1.800936e-14     1
 
-## Generate 4 samples using default parameters
-## and random input and magic values
+## Generate 4 samples using default parameters and random input and magic values
+# Optionally, parameters can be returned with keep_params = TRUE
 samples <- frsr_sample(4, keep_params = TRUE)
+# knitr's kable() makes tables look better on github
 library(knitr)
 kable(samples, format = "simple")
 #      input     initial   after_one      final       error        diff   iters        magic   NRmax     A     B   tol
@@ -79,3 +70,13 @@ kable(bins, format = "simple")
 #         3      0.6250      0.8125   1597247742            0.0083959            0.0136274    4
 #         4      0.8125      1.0000   1597610966            0.0158552            0.0252852    4
 ```
+
+## FISR or FRSR?
+
+When the FRSR became famous (and only then), it was referred to as an inverse, meaning "[multiplicative inverse](https://en.wikipedia.org/wiki/Multiplicative_inverse)". In both the original source of Quake's FRSR was the "reciproot" tucked away in [a math library since 1986](https://www.netlib.org/fdlibm/e_sqrt.c) and in one of the first software libraries written by Alan Turing, D.G. Prinz, and Cecily Poppelwell 1/sqrt(x) is the "reciproot" as well. 
+
+Mike Day argues for the name FRSR in his [2023 generalization of the FRSR](https://arxiv.org/abs/2307.15600) to support any rational power or precision of base (including infinite precision). I think he's right. Fame has an interia all its own, so we shall see which name prevails.
+
+## Our friends the robots
+
+This project was built with the (paid) assistance of an AI tool, [Perplexity AI](https://www.perplexity.ai/). The AI assisted with writing code, understanding the R package development process, and writing C++ code (which is a language I've never written in). 
