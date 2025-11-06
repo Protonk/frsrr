@@ -25,6 +25,7 @@ NULL
 #'     \item{after_one}{Result after one iteration of Newton-Raphson}
 #'     \item{final}{Result from final iteration}
 #'     \item{error}{Absolute relative error of final versus standard library}
+#'     \item{enre}{Exponent-normalized absolute relative error}
 #'     \item{diff}{Difference between final and penultimate approximations}
 #'     \item{iters}{Number of iterations performed}
 #'
@@ -82,13 +83,13 @@ NULL
 #'
 #' # Optional detail
 #' result.df <- frsr(c(pi, 2^-31, 0.4, 6.02e23), detail = TRUE)
-#' ## result.df is a dataframe with 4 rows and 7 columns
+#' ## result.df is a dataframe with 4 rows and 8 columns
 #' print(result.df)
-#' #         input      initial    after_one        final        error          diff iters
-#' # 1 3.141593e+00 5.735160e-01 5.639570e-01 5.639570e-01 0.0004122326 -9.558976e-03     1
-#' # 2 4.656613e-10 4.693787e+04 4.632937e+04 4.632937e+04 0.0002499308 -6.085039e+02     1
-#' # 3 4.000000e-01 1.632430e+00 1.578616e+00 1.578616e+00 0.0015955754 -5.381417e-02     1
-#' # 4 6.020000e+23 1.306493e-12 1.288484e-12 1.288484e-12 0.0002823969 -1.800925e-14     1
+#' #         input      initial    after_one        final        error         enre          diff iters
+#' # 1 3.141593e+00 5.735160e-01 5.639570e-01 5.639570e-01 0.0004122326 0.0004122326 -9.558976e-03     1
+#' # 2 4.656613e-10 4.693787e+04 4.632937e+04 4.632937e+04 0.0002499308 0.0002499308 -6.085039e+02     1
+#' # 3 4.000000e-01 1.632430e+00 1.578616e+00 1.578616e+00 0.0015955754 0.0015955754 -5.381417e-02     1
+#' # 4 6.020000e+23 1.306493e-12 1.288484e-12 1.288484e-12 0.0002823969 0.0002823969 -1.800925e-14     1
 #' # }
 #' @name frsr
 NULL

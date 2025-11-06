@@ -27,5 +27,5 @@ test_that("frsr_sample handles NULL x_min and x_max correctly", {
 
 test_that("frsr_sample returns correct structure", {
     result <- frsr_sample(4)
-    expect_true(all(c("input", "initial", "after_one", "final", "error", "diff", "iters") %in% names(result)))
+    expect_true(all(c("input", "initial", "after_one", "final", "error", "enre", "diff", "iters") %in% names(result)))
 })
