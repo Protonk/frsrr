@@ -59,7 +59,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
                      float_samples = 1024, magic_samples = 2048,
                      magic_min = 1596980000L,
                      magic_max = 1598050000L) {
-  # Calculate bin edges based on the bin_type
+  # Divide [x_min, x_max] into evenly spaced bin boundaries
   bin_edges <- seq(x_min, x_max, length.out = n_bins + 1)
   
   # Generate results for each bin

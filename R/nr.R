@@ -65,9 +65,8 @@ frsr_NR <- function(x, magic = 0x5f3759df, formula, NRmax = 1, tol = 0) {
     error <- abs(new_y - reference) / reference
     y <- new_y
     iter <- iter + 1
-    # for varied input vectors x,
-    # we may not catch convergence with "max"
-    # as some elements may not converge while others do
+    # Check the worst relative error so we only stop once every element
+    # in the input vector has met the requested tolerance
     if (max(error) < tol && tol > 0) {
       break
     }
