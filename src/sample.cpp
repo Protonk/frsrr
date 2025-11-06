@@ -3,6 +3,8 @@
 #include <random>
 #include <stdexcept>
 #include <algorithm>
+#include <bit>
+#include <limits>
 
 using namespace Rcpp;
 
@@ -22,14 +24,20 @@ NumericVector boundedStratifiedSample(int n, double low, double high) {
         throw std::invalid_argument("Subnormal numbers are not supported. 'low' must be >= -126");
     }
     
+    if (!(low < high)) {
+        throw std::invalid_argument("'low' must be strictly less than 'high'");
+    }
+
     NumericVector result(n);
-    
+
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<uint32_t> dis(0, std::numeric_limits<uint32_t>::max());
-    
+    std::uniform_int_distribution<uint32_t> exponent_draw(1, std::numeric_limits<uint32_t>::max());
+    std::uniform_int_distribution<uint32_t> significand_draw(0, SignificandMask);
+
     int emin = std::ceil(low);
     int emax = std::ceil(high);
+    int exponent_span = std::max(1, emax - emin);
     
     for (int i = 0; i < n; ++i) {
         float sample;
@@ -37,11 +45,11 @@ NumericVector boundedStratifiedSample(int n, double low, double high) {
         // through the exponent range before composing the IEEE-754 float.
         do {
             int e = emax - 1;
-            uint32_t bits = dis(gen);
-            int lz = __builtin_clz(bits);
-            e -= (lz % (emax - emin));
-            
-            uint32_t significand = dis(gen) & SignificandMask;
+            uint32_t bits = exponent_draw(gen);
+            int lz = std::countl_zero(bits);
+            e -= (lz % exponent_span);
+
+            uint32_t significand = significand_draw(gen);
             sample = FromBits((uint32_t(e + 127) << 23) | significand);
         } while (sample < std::pow(2.0f, low) || sample >= std::pow(2.0f, high));
 

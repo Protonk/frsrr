@@ -59,9 +59,49 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
                      float_samples = 1024, magic_samples = 2048,
                      magic_min = 1596980000L,
                      magic_max = 1598050000L) {
+  if (!is.numeric(x_min) || length(x_min) != 1 || !is.finite(x_min)) {
+    stop("`x_min` must be a finite numeric scalar", call. = FALSE)
+  }
+  if (!is.numeric(x_max) || length(x_max) != 1 || !is.finite(x_max)) {
+    stop("`x_max` must be a finite numeric scalar", call. = FALSE)
+  }
+  if (x_min >= x_max) {
+    stop("`x_min` must be strictly less than `x_max`", call. = FALSE)
+  }
+
+  if (!is.numeric(n_bins) || length(n_bins) != 1 || !is.finite(n_bins)) {
+    stop("`n_bins` must be a finite numeric scalar", call. = FALSE)
+  }
+  if (n_bins < 1) {
+    stop("`n_bins` must be at least 1", call. = FALSE)
+  }
+  n_bins <- as.integer(n_bins)
+
+  if (!is.numeric(float_samples) || length(float_samples) != 1 || !is.finite(float_samples) || float_samples < 1) {
+    stop("`float_samples` must be a positive integer", call. = FALSE)
+  }
+  float_samples <- as.integer(float_samples)
+
+  if (!is.numeric(magic_samples) || length(magic_samples) != 1 || !is.finite(magic_samples) || magic_samples < 1) {
+    stop("`magic_samples` must be a positive integer", call. = FALSE)
+  }
+  magic_samples <- as.integer(magic_samples)
+
+  if (!is.numeric(magic_min) || length(magic_min) != 1 || !is.finite(magic_min)) {
+    stop("`magic_min` must be a finite numeric scalar", call. = FALSE)
+  }
+  if (!is.numeric(magic_max) || length(magic_max) != 1 || !is.finite(magic_max)) {
+    stop("`magic_max` must be a finite numeric scalar", call. = FALSE)
+  }
+  magic_min <- as.integer(magic_min)
+  magic_max <- as.integer(magic_max)
+  if (magic_min > magic_max) {
+    stop("`magic_min` must be less than or equal to `magic_max`", call. = FALSE)
+  }
+
   # Divide [x_min, x_max] into evenly spaced bin boundaries
   bin_edges <- seq(x_min, x_max, length.out = n_bins + 1)
-  
+
   # Generate results for each bin
   bins <- lapply(seq_len(n_bins), function(i) {
     bin_min <- bin_edges[i]
