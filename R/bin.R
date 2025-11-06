@@ -59,14 +59,14 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
                      float_samples = 1024, magic_samples = 2048,
                      magic_min = 1596980000L,
                      magic_max = 1598050000L) {
-  # Calculate bin edges based on the bin_type
+  # Divide [x_min, x_max] into evenly spaced bin boundaries
   bin_edges <- seq(x_min, x_max, length.out = n_bins + 1)
   
   # Generate results for each bin
   bins <- lapply(seq_len(n_bins), function(i) {
     bin_min <- bin_edges[i]
     bin_max <- bin_edges[i + 1]
-    # standardize calls for float samples
+    # Pass exponent bounds because the sampler stratifies floats by log2 exponent range
     floats <- .Call('_frsrr_boundedStratifiedSample',
                     PACKAGE = 'frsrr',
                     float_samples, log2(bin_min), log2(bin_max))

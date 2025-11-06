@@ -74,7 +74,7 @@ frsr_sample <- function(n,
     } else if (is.null(x_max)) {
         rep(x_min, n)  # Use x_min if x_max is NULL
     } else {
-    # The C++ stratified sampler works; it's easy to use and forget about
+    # Forward log2 bounds because the C++ helper samples uniformly across exponent strata
     .Call('_frsrr_boundedStratifiedSample',
           PACKAGE = 'frsrr',
           n, log2(x_min), log2(x_max))

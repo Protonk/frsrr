@@ -38,6 +38,9 @@ float frsr0(float x, uint32_t magic, int NRmax) {
         float f;
         uint32_t u;
     } y = {static_cast<float>(x)};
+    // R numeric vectors hand us doubles; narrowing to float here ensures the
+    // bit reinterpretation below sees the 32-bit layout the algorithm expects
+    // instead of trying to treat a double's 64-bit payload as a float.
     // The magic constant is largely a restoring constant,
     // restoring the exponent bits lost when the float is right shifted.
     // But a specially chosen constant can give a better first guess.

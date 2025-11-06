@@ -32,6 +32,8 @@ struct MagicReducer : public Worker
    void operator()(std::size_t begin, std::size_t end) {
      for (std::size_t i = begin; i < end; ++i) {
        uint32_t magic = static_cast<uint32_t>(magics[i]);
+       // IntegerVector stores signed ints; casting to uint32_t lets us reuse
+       // the bits directly as the magic constant without changing their value.
        float total_error = 0.0f;
        float max_error = 0.0f;
        
