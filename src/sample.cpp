@@ -44,9 +44,11 @@ NumericVector boundedStratifiedSample(int n, double low, double high) {
             uint32_t significand = dis(gen) & SignificandMask;
             sample = FromBits((uint32_t(e + 127) << 23) | significand);
         } while (sample < std::pow(2.0f, low) || sample >= std::pow(2.0f, high));
-        
+
         result[i] = sample;
+        // NumericVector stores doubles; assigning the float promotes it back to
+        // R's native type while letting us keep the inner loop in 32-bit math.
     }
-    
+
     return result;
 }
