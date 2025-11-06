@@ -1,8 +1,9 @@
 test_that("detail argument produces expected output structure", {
   result <- frsr(c(1, 4, 9), detail = TRUE)
   expect_s3_class(result, "data.frame")
-  expect_named(result, c("input", "initial", "after_one", "final", "error", "diff", "iters"))
+  expect_named(result, c("input", "initial", "after_one", "final", "error", "enre", "diff", "iters"))
   expect_equal(nrow(result), 3)
+  expect_true(all(is.finite(result$enre)))
   # frsr
   result.vec <- frsr(c(1, 4, 9))
   expect_equal(length(result.vec), 3)
@@ -70,6 +71,7 @@ test_that("frsr default returns a numeric vector", {
 
 test_that("frsr includes parameters when keep_params is TRUE", {
   result <- frsr(4, keep_params = TRUE, detail = TRUE)
+  expect_true("enre" %in% names(result))
   expect_true("magic" %in% names(result))
   expect_true("NRmax" %in% names(result))
   expect_true("A" %in% names(result))
@@ -79,6 +81,7 @@ test_that("frsr includes parameters when keep_params is TRUE", {
 
 test_that("frsr does not include parameters when keep_params is FALSE", {
   result <- frsr(4, keep_params = FALSE, detail = TRUE)
+  expect_true("enre" %in% names(result))
   expect_false("magic" %in% names(result))
   expect_false("NRmax" %in% names(result))
   expect_false("A" %in% names(result))

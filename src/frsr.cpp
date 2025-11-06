@@ -12,10 +12,12 @@ struct FRSRResult {
     NumericVector after_one;
     NumericVector final;
     NumericVector error;
+    NumericVector enre;
     NumericVector diff;
     IntegerVector iters;
 
-    FRSRResult(int n) : initial(n), after_one(n), final(n), error(n), diff(n), iters(n) {}
+    FRSRResult(int n)
+        : initial(n), after_one(n), final(n), error(n), enre(n), diff(n), iters(n) {}
 };
 
 // The fast reciprocal square root documented without
@@ -69,12 +71,22 @@ struct FRSRWorker : public Worker {
 
     void operator()(std::size_t begin, std::size_t end) {
         for (std::size_t j = begin; j < end; ++j) {
-            float reference = 1.0 / std::sqrt(x[j]);
+            double x_val = x[j];
+            double reference = 1.0 / std::sqrt(x_val);
             float rel_error = std::numeric_limits<float>::max();
             int actual_iters = 0;
 
+            int exponent = 0;
+            double mantissa = std::frexp(x_val, &exponent);
+            double canonical_input = mantissa * 2.0;
+            int k = exponent - 1;
+
+            float canonical_y = frsr0(static_cast<float>(canonical_input), magic[j], 0);
+            double canonical_reference = 1.0 / std::sqrt(canonical_input);
+            float canonical_rel_error = std::abs(canonical_y - canonical_reference) / canonical_reference;
+
             // Initial guess
-            float y = frsr0(x[j], magic[j], 0);
+            float y = frsr0(static_cast<float>(x_val), magic[j], 0);
             res.initial[j] = y;
             rel_error = std::abs(y - reference) / reference;
 
@@ -87,11 +99,11 @@ struct FRSRWorker : public Worker {
                 res.iters[j] = 0;
                 res.error[j] = rel_error;
             } else {
-                // Newton-Raphson iterations
+                // Newton-Raphson iterations for the input value
                 for (int i = 1; i <= NRmax[j]; i++) {
                     actual_iters++;
                     float prev_y = y;
-                    y = y * (A[j] - B[j] * x[j] * y * y);
+                    y = y * (A[j] - B[j] * x_val * y * y);
                     // most implementations use 1 iteration only
                     if (actual_iters == 1) res.after_one[j] = y;
                     // For iters > 2, a difference is given so
@@ -100,15 +112,29 @@ struct FRSRWorker : public Worker {
                     // storing all of them.
                     res.diff[j] = y - prev_y;
                     rel_error = std::abs(y - reference) / reference;
-                    // exit early if we are within tolerance & 
+                    // exit early if we are within tolerance &
                     // tolerance argument is set
                     if (tol[j] > 0 && rel_error <= tol[j]) break;
+                }
+
+                // Newton-Raphson iterations for the canonical input
+                for (int i = 1; i <= NRmax[j]; ++i) {
+                    canonical_y = canonical_y * (A[j] - B[j] * canonical_input * canonical_y * canonical_y);
+                    canonical_rel_error = std::abs(canonical_y - canonical_reference) / canonical_reference;
+                    if (tol[j] > 0 && canonical_rel_error <= tol[j]) break;
                 }
             }
             // Final results
             res.final[j] = y;
             res.iters[j] = actual_iters;
             res.error[j] = rel_error;
+            double scale = std::pow(2.0, 0.5 * static_cast<double>(k));
+            if (!std::isfinite(scale) || scale == 0.0) {
+                res.enre[j] = NA_REAL;
+            } else {
+                double normalized = static_cast<double>(canonical_y) / scale;
+                res.enre[j] = std::abs(normalized - reference) / reference;
+            }
         }
     }
 };
@@ -139,6 +165,7 @@ DataFrame frsr(DataFrame input, bool keep_params) {
             _["after_one"] = res.after_one,
             _["final"] = res.final,
             _["error"] = res.error,
+            _["enre"] = res.enre,
             _["diff"] = res.diff,
             _["iters"] = res.iters,
             _["magic"] = magic,
@@ -154,6 +181,7 @@ DataFrame frsr(DataFrame input, bool keep_params) {
             _["after_one"] = res.after_one,
             _["final"] = res.final,
             _["error"] = res.error,
+            _["enre"] = res.enre,
             _["diff"] = res.diff,
             _["iters"] = res.iters
         );
