@@ -12,8 +12,9 @@ inline float FromBits(uint32_t b) { return std::bit_cast<float>(b); }
 inline int Exponent(float f) { return ((ToBits(f) >> 23) & 0xff) - 127; }
 constexpr int SignificandMask = (1 << 23) - 1;
 
-// Don't be fooled by the argument types, these need to be exponents
-// The double type is chosen because they could be fractional.
+// Accept log2 exponent bounds even though they arrive as doubles. Allowing
+// fractional exponents gives callers partially open intervals when mapping back
+// to float space.
 // [[Rcpp::export]]
 NumericVector boundedStratifiedSample(int n, double low, double high) {
 
@@ -32,6 +33,8 @@ NumericVector boundedStratifiedSample(int n, double low, double high) {
     
     for (int i = 0; i < n; ++i) {
         float sample;
+        // Draw candidate bits and use the leading-zero count to rotate evenly
+        // through the exponent range before composing the IEEE-754 float.
         do {
             int e = emax - 1;
             uint32_t bits = dis(gen);
