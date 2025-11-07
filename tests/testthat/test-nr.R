@@ -38,4 +38,8 @@ test_that("frsr_NR produces expected output structure", {
     result <- frsr_NR(x, formula = formula)
     expect_s3_class(result, "data.frame")
     expect_equal(nrow(result), length(x))
+    expect_identical(
+      names(result),
+      c("input", "initial", "final", "error", "converged", "conv_rate", "iters")
+    )
 })

@@ -145,5 +145,15 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
   })
   
   # Combine results from all bins into a single data frame
-  cbind(do.call(rbind, bins), data.frame(N = n_bins))
+  result <- do.call(rbind, bins)
+  result$N_bins <- rep.int(n_bins, nrow(result))
+  result[c(
+    "N_bins",
+    "Location",
+    "Range_Min",
+    "Range_Max",
+    "Magic",
+    "Max_Relative_Error",
+    "Avg_Relative_Error"
+  )]
 }

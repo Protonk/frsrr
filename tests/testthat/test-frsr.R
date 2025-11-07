@@ -1,10 +1,21 @@
 test_that("detail argument produces expected output structure", {
   result <- frsr(c(1, 4, 9), detail = TRUE)
+  expected_cols <- c(
+    "input",
+    "initial",
+    "after_one",
+    "final",
+    "error",
+    "enre",
+    "diff",
+    "iters"
+  )
+
   expect_s3_class(result, "data.frame")
-  expect_named(result, c("input", "initial", "after_one", "final", "error", "enre", "diff", "iters"))
+  expect_identical(names(result), expected_cols)
   expect_equal(nrow(result), 3)
-  expect_true(all(is.finite(result$enre)))
-  # frsr
+  expect_true(all(vapply(result, is.numeric, logical(1))))
+
   result.vec <- frsr(c(1, 4, 9))
   expect_equal(length(result.vec), 3)
 })
@@ -69,22 +80,22 @@ test_that("frsr default returns a numeric vector", {
   expect_equal(nrow(result_multiple_detail), length(input_vector))
 })
 
-test_that("frsr includes parameters when keep_params is TRUE", {
-  result <- frsr(4, keep_params = TRUE, detail = TRUE)
-  expect_true("enre" %in% names(result))
-  expect_true("magic" %in% names(result))
-  expect_true("NRmax" %in% names(result))
-  expect_true("A" %in% names(result))
-  expect_true("B" %in% names(result))
-  expect_true("tol" %in% names(result))
-})
+test_that("frsr toggles parameter columns according to keep_params", {
+  base_cols <- c(
+    "input",
+    "initial",
+    "after_one",
+    "final",
+    "error",
+    "enre",
+    "diff",
+    "iters"
+  )
+  param_cols <- c("magic", "NRmax", "A", "B", "tol")
 
-test_that("frsr does not include parameters when keep_params is FALSE", {
-  result <- frsr(4, keep_params = FALSE, detail = TRUE)
-  expect_true("enre" %in% names(result))
-  expect_false("magic" %in% names(result))
-  expect_false("NRmax" %in% names(result))
-  expect_false("A" %in% names(result))
-  expect_false("B" %in% names(result))
-  expect_false("tol" %in% names(result))
+  result_with <- frsr(4, keep_params = TRUE, detail = TRUE)
+  expect_identical(names(result_with), c(base_cols, param_cols))
+
+  result_without <- frsr(4, keep_params = FALSE, detail = TRUE)
+  expect_identical(names(result_without), base_cols)
 })

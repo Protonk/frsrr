@@ -4,9 +4,11 @@ test_that("frsr_sample returns correct number of samples", {
 })
 
 test_that("frsr_sample returns parameters when keep_params is TRUE", {
+    base_cols <- c("input", "initial", "after_one", "final", "error", "enre", "diff", "iters")
+    param_cols <- c("magic", "NRmax", "A", "B", "tol")
+
     result <- frsr_sample(4, keep_params = TRUE)
-    detail_comp <- frsr(1:4, detail = TRUE)
-    expect_true( all(names(detail_comp) %in% names(result)) )
+    expect_identical(names(result), c(base_cols, param_cols))
 })
 
 test_that("frsr_sample handles NULL magic_min and magic_max correctly", {
@@ -25,9 +27,12 @@ test_that("frsr_sample handles NULL x_min and x_max correctly", {
     expect_equal(length(unique(result$input)), 1)
 })
 
-test_that("frsr_sample returns correct structure", {
+test_that("frsr_sample returns documented columns", {
     result <- frsr_sample(4)
-    expect_true(all(c("input", "initial", "after_one", "final", "error", "enre", "diff", "iters") %in% names(result)))
+    expected_cols <- c("input", "initial", "after_one", "final", "error", "enre", "diff", "iters")
+
+    expect_identical(names(result), expected_cols)
+    expect_true(all(vapply(result, is.numeric, logical(1))))
 })
 
 test_that("boundedStratifiedSample handles narrow exponent ranges", {
