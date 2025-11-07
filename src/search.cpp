@@ -229,7 +229,7 @@ DataFrame search_optimal_constant(NumericVector floats, IntegerVector magics, in
 
     return DataFrame::create(
         Named("Magic") = reducer.best_magic,
-        Named("Avg_Relative_Error") = reducer.best_avg_error,
-        Named("Max_Relative_Error") = reducer.min_max_error
+        Named("Objective") = reducer.best_avg_error,
+        Named("Dependent") = reducer.min_max_error
     );
 }

@@ -27,8 +27,8 @@ NULL
 #'     \item{Range_Min}{Minimum value of the bin range}
 #'     \item{Range_Max}{Maximum value of the bin range}
 #'     \item{Magic}{Optimal magic constant as an integer}
-#'     \item{Max_Relative_Error}{Minimum max relative error for the bin}
-#'     \item{Avg_Relative_Error}{Average relative error associated with minimax magic constant}
+#'     \item{Objective}{Metric which is minimized or maximized to determine optimal magic values}
+#'     \item{Dependent}{Value of a metric (usually an average) which results by reaching the objective.}
 #'
 #' @details
 #' This function divides the range [x_min, x_max] into n_bins bins and generates float_samples
@@ -161,7 +161,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     "Range_Min",
     "Range_Max",
     "Magic",
-    "Max_Relative_Error",
-    "Avg_Relative_Error"
+    "Objective",
+    "Dependent"
   )]
 }
