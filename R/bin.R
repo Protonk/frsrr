@@ -6,7 +6,7 @@ NULL
 #' FRSR Bin
 #'
 #' Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins
-#' by minimizing a user-selected objective metric.
+#' by minimizing the maximum relative error. 
 #'
 #' @param x_min Numeric. Default is 0.25.
 #' @param x_max Numeric. Default is 1.0.
@@ -19,12 +19,6 @@ NULL
 #'   number of representable significands in each exponent stratum. Default is
 #'   \code{FALSE}.
 #' @param NRmax Integer. The maximum number of Newton-Raphson iterations (default: 0).
-#' @param objective_metric Character scalar naming the metric used to choose the optimal magic
-#'   constant. Supported values are \code{"max"}, \code{"mean"}, \code{"sum"}, \code{"rms"}, and
-#'   \code{"variance"}.
-#' @param metrics_to_report Character vector naming additional metrics to summarise for the selected
-#'   magic constant. Each entry must be one of the supported metric names. Defaults to reporting the
-#'   mean.
 #'
 #' @return
 #' A data frame with columns:
@@ -33,16 +27,15 @@ NULL
 #'     \item{Range_Min}{Minimum value of the bin range}
 #'     \item{Range_Max}{Maximum value of the bin range}
 #'     \item{Magic}{Optimal magic constant as an integer}
-#'     \item{Objective_<Metric>}{Value of the selected objective metric for the optimal magic}
-#'     \item{Metric_<Metric>}{Summary metrics requested via \code{metrics_to_report}. The suffix
-#'       matches the metric name (for example, \code{Metric_Mean}).}
+#'     \item{Max_Relative_Error}{Minimum max relative error for the bin}
+#'     \item{Avg_Relative_Error}{Average relative error associated with minimax magic constant}
 #'
 #' @details
 #' This function divides the range [x_min, x_max] into n_bins bins and generates float_samples
 #' floating-point samples within each bin. It then tests magic_samples magic constants within
 #' the range [magic_min, magic_max] to find the optimal magic constant for each bin that minimizes
-#' the objective metric per bin under the chosen configuration. The achievable measurements and optimal
-#' constants will change with bin size and number of bins, as well as the integer and float samples.
+#' the maximum relative error per bin. The achievable error and optimal constants will change with
+#' bin size and number of bins, as well as the integer and float samples. 
 #' 
 #' The FRSR is periodic over 0.25 to 1.0 with a magic constant of 0x5f3759df. I don't know if 
 #' this is generally true. Interestingly, the linear approximation to the logarithm used is
@@ -53,11 +46,11 @@ NULL
 #' # Generate optimal magic constants for the range [0.25, 1.0] divided into 4 bins
 #' result <- frsr_bin()
 #' print(result)
-#' #   Location Range_Min Range_Max      Magic Objective_Max Metric_Mean N_bins
-#' # 1        1 0.2500000 0.3535534 1597413411   0.000454920 0.000170461      4
-#' # 2        2 0.3535534 0.5000000 1597115686   0.000160304 0.000077194      4
-#' # 3        3 0.5000000 0.7071068 1597150657   0.000135623 0.000060779      4
-#' # 4        4 0.7071068 1.0000000 1597488127   0.000516480 0.000209730      4
+#' #   Location Range_Min Range_Max      Magic    Sum_Error N_bins
+#' # 1        1 0.2500000 0.3535534 1597413411 4.549199e-04      4
+#' # 2        2 0.3535534 0.5000000 1597115686 6.175506e-05      4
+#' # 3        3 0.5000000 0.7071068 1597150657 3.486200e-05      4
+#' # 4        4 0.7071068 1.0000000 1597488127 8.389181e-04      4
 #' # }
 #' @name frsr_bin
 NULL
@@ -69,9 +62,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
                      float_samples = 1024, magic_samples = 2048,
                      magic_min = 1596980000L,
                      magic_max = 1598050000L,
-                     weighted = FALSE,
-                     objective_metric = "max",
-                     metrics_to_report = c("mean")) {
+                     weighted = FALSE) {
   if (!is.numeric(x_min) || length(x_min) != 1L || !is.finite(x_min)) {
     stop("`x_min` must be a finite numeric scalar", call. = FALSE)
   }
@@ -133,33 +124,6 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     stop("`weighted` must be a non-missing logical scalar", call. = FALSE)
   }
 
-  if ((!is.character(objective_metric) && !is.factor(objective_metric)) ||
-      length(objective_metric) != 1L) {
-    stop("`objective_metric` must be a non-missing character scalar", call. = FALSE)
-  }
-  objective_metric <- as.character(objective_metric)
-  if (is.na(objective_metric)) {
-    stop("`objective_metric` must be a non-missing character scalar", call. = FALSE)
-  }
-  if (!nzchar(objective_metric)) {
-    stop("`objective_metric` must not be empty", call. = FALSE)
-  }
-
-  if (!is.character(metrics_to_report) && !is.factor(metrics_to_report)) {
-    stop("`metrics_to_report` must be a character vector", call. = FALSE)
-  }
-  metrics_to_report <- as.character(metrics_to_report)
-  if (length(metrics_to_report) < 1L) {
-    stop("`metrics_to_report` must contain at least one metric name", call. = FALSE)
-  }
-  if (any(is.na(metrics_to_report))) {
-    stop("`metrics_to_report` must not contain missing values", call. = FALSE)
-  }
-  if (any(!nzchar(metrics_to_report))) {
-    stop("`metrics_to_report` must not contain empty strings", call. = FALSE)
-  }
-  metrics_to_report <- unique(metrics_to_report)
-
   # Divide [x_min, x_max] into evenly spaced bin boundaries
   bin_edges <- seq(x_min, x_max, length.out = n_bins + 1)
   
@@ -177,9 +141,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     # Call the C++ function to compute optimal magic constant
     result <- .Call('_frsrr_search_optimal_constant',
                     PACKAGE = 'frsrr',
-                    floats, magics, NRmax,
-                    objective_metric,
-                    metrics_to_report)
+                    floats, magics, NRmax)
     
     # Return results as a data frame
     output <- data.frame(
@@ -193,12 +155,13 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
   # Combine results from all bins into a single data frame
   result <- do.call(rbind, bins)
   result$N_bins <- rep.int(n_bins, nrow(result))
-  ordered_cols <- c(
+  result[c(
     "N_bins",
     "Location",
     "Range_Min",
     "Range_Max",
-    names(result)[!(names(result) %in% c("N_bins", "Location", "Range_Min", "Range_Max"))]
-  )
-  result[ordered_cols]
+    "Magic",
+    "Max_Relative_Error",
+    "Avg_Relative_Error"
+  )]
 }

@@ -3,11 +3,9 @@
 #include <RcppParallel.h>
 #include <algorithm>
 #include <bit>
-#include <cctype>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
-#include <string>
 #include <vector>
 
 #include "frsr.h"
@@ -16,15 +14,10 @@ using namespace Rcpp;
 using namespace RcppParallel;
 
 namespace {
-
-// Convert an IEEE-754 binary32 payload encoded as an integer into a float.
 inline float FromBits(uint32_t bits) {
     return std::bit_cast<float>(bits);
 }
 
-// Draw a random offset in [0, range) using R's RNG. The helper guards against
-// the corner case where the random draw is exactly equal to the exclusive upper
-// bound by clamping the result back inside the interval.
 inline uint32_t sample_offset(uint32_t range) {
     if (range == 0u) {
         return 0u;
@@ -37,107 +30,9 @@ inline uint32_t sample_offset(uint32_t range) {
     }
     return draw;
 }
-
-enum class MetricId {
-    kMax,
-    kMean,
-    kSum,
-    kRms,
-    kVariance,
-};
-
-std::string normalize_metric_name(const std::string& raw) {
-    std::string normalized;
-    normalized.reserve(raw.size());
-    for (char ch : raw) {
-        unsigned char uch = static_cast<unsigned char>(ch);
-        if (std::isalnum(uch)) {
-            normalized.push_back(static_cast<char>(std::tolower(uch)));
-        }
-    }
-    return normalized;
 }
-
-MetricId parse_metric_name(const std::string& raw) {
-    std::string normalized = normalize_metric_name(raw);
-    if (normalized == "max" || normalized == "maximum") {
-        return MetricId::kMax;
-    }
-    if (normalized == "mean" || normalized == "average") {
-        return MetricId::kMean;
-    }
-    if (normalized == "sum" || normalized == "total") {
-        return MetricId::kSum;
-    }
-    if (normalized == "rms" || normalized == "rootmeansquare") {
-        return MetricId::kRms;
-    }
-    if (normalized == "variance") {
-        return MetricId::kVariance;
-    }
-
-    stop("Unsupported metric: `" + raw + "`");
-}
-
-std::string metric_label(MetricId metric) {
-    switch (metric) {
-    case MetricId::kMax:
-        return "Max";
-    case MetricId::kMean:
-        return "Mean";
-    case MetricId::kSum:
-        return "Sum";
-    case MetricId::kRms:
-        return "RootMeanSquare";
-    case MetricId::kVariance:
-        return "Variance";
-    }
-    return "";
-}
-
-std::string column_name(MetricId metric, bool objective) {
-    std::string prefix = objective ? "Objective_" : "Metric_";
-    return prefix + metric_label(metric);
-}
-
-struct CandidateStats {
-    double sum = 0.0;
-    double sum_sq = 0.0;
-    double max = 0.0;
-};
-
-double evaluate_metric(MetricId metric, const CandidateStats& stats, double sample_count) {
-    switch (metric) {
-    case MetricId::kMax:
-        return stats.max;
-    case MetricId::kMean:
-        return stats.sum / sample_count;
-    case MetricId::kSum:
-        return stats.sum;
-    case MetricId::kRms: {
-        double mean_square = stats.sum_sq / sample_count;
-        return std::sqrt(mean_square);
-    }
-    case MetricId::kVariance: {
-        double mean = stats.sum / sample_count;
-        double mean_square = stats.sum_sq / sample_count;
-        double variance = mean_square - mean * mean;
-        if (variance < 0.0 && std::abs(variance) < 1e-15) {
-            variance = 0.0;
-        }
-        return variance;
-    }
-    }
-    stop("Unsupported metric id");
-}
-
-}  // namespace
 
 // [[Rcpp::export]]
-// Enumerate float32 values with exponents inside [low, high] and sample from that
-// discrete population. The sampler walks the exponent strata explicitly so that
-// rare exponents are reachable even when the caller draws only a handful of
-// samples.
 NumericVector bounded_stratified_sample(int n, double low, double high, bool weighted) {
     if (n < 0) {
         throw std::invalid_argument("`n` must be non-negative");
@@ -220,9 +115,6 @@ NumericVector bounded_stratified_sample(int n, double low, double high, bool wei
     NumericVector result(n);
 
     if (!weighted) {
-        // Deterministic stratified walk: rotate through the strata while taking a
-        // random starting point within the cycle so that the workload distributes
-        // evenly without clustering around the lower exponents.
         const std::size_t k = strata.size();
         const std::size_t start = sample_offset(static_cast<uint32_t>(k));
         for (int i = 0; i < n; ++i) {
@@ -235,9 +127,6 @@ NumericVector bounded_stratified_sample(int n, double low, double high, bool wei
             result[i] = sample;
         }
     } else {
-        // Weighted sampling: strata receive probability mass proportional to the
-        // number of distinct significands they contain so that frequent exponents
-        // are represented in proportion to their IEEE-754 multiplicity.
         std::vector<uint64_t> prefix(strata.size());
         uint64_t total = 0;
         for (std::size_t i = 0; i < strata.size(); ++i) {
@@ -268,137 +157,79 @@ NumericVector bounded_stratified_sample(int n, double low, double high, bool wei
     return result;
 }
 
-// Parallel reducer that scans the candidate magic constants and tracks the
-// constant that minimises the caller-selected objective metric. Each worker
-// keeps the best candidate for its partition; the final join retains the
-// overall best summary statistics.
 struct MagicReducer : public Worker {
     const RVector<double> floats;
     const RVector<int> magics;
     const int NRmax;
-    const MetricId objective;
 
     uint32_t best_magic;
-    CandidateStats best_stats;
-    double best_objective;
-    bool has_best;
+    float min_max_error;
+    float best_avg_error;
 
-    MagicReducer(const NumericVector floats,
-                 const IntegerVector magics,
-                 int NRmax,
-                 MetricId objective_metric)
+    MagicReducer(const NumericVector floats, const IntegerVector magics, int NRmax)
         : floats(floats),
           magics(magics),
           NRmax(NRmax),
-          objective(objective_metric),
-          best_magic(0u),
-          best_stats(),
-          best_objective(std::numeric_limits<double>::infinity()),
-          has_best(false) {}
+          best_magic(static_cast<uint32_t>(magics[0])),
+          min_max_error(std::numeric_limits<float>::max()),
+          best_avg_error(0.0f) {}
 
     MagicReducer(const MagicReducer& reducer, Split)
         : floats(reducer.floats),
           magics(reducer.magics),
           NRmax(reducer.NRmax),
-          objective(reducer.objective),
-          best_magic(0u),
-          best_stats(),
-          best_objective(std::numeric_limits<double>::infinity()),
-          has_best(false) {}
+          best_magic(static_cast<uint32_t>(reducer.magics[0])),
+          min_max_error(std::numeric_limits<float>::max()),
+          best_avg_error(0.0f) {}
 
     void operator()(std::size_t begin, std::size_t end) {
-        double sample_count = static_cast<double>(floats.length());
         for (std::size_t i = begin; i < end; ++i) {
             uint32_t magic = static_cast<uint32_t>(magics[i]);
-            CandidateStats candidate_stats;
+            float total_error = 0.0f;
+            float max_error = 0.0f;
 
-            // Evaluate the current candidate across all sampled floats and
-            // accumulate the sufficient statistics required to evaluate any of
-            // the scalar metrics supported by the reducer.
             for (int j = 0; j < floats.length(); ++j) {
                 float x = floats[j];
                 float approx = frsr0(x, magic, NRmax);
                 float actual = 1.0f / std::sqrt(x);
-                // The per-sample metric captures the absolute relative difference between the
-                // approximation and the true reciprocal square root. Downstream aggregations derive
-                // various scalar summaries (e.g., RMS, sum) from these measurements.
-                double sample_measure = std::abs((approx - actual) / actual);
-                candidate_stats.sum += sample_measure;
-                candidate_stats.sum_sq += sample_measure * sample_measure;
-                if (sample_measure > candidate_stats.max) {
-                    candidate_stats.max = sample_measure;
+                float rel_error = std::abs((approx - actual) / actual);
+                total_error += rel_error;
+                if (rel_error > max_error) {
+                    max_error = rel_error;
                 }
             }
 
-            double objective_value = evaluate_metric(objective, candidate_stats, sample_count);
+            float avg_error = total_error / floats.length();
 
-            if (!has_best || objective_value < best_objective) {
-                has_best = true;
-                best_objective = objective_value;
+            if (max_error < min_max_error) {
+                min_max_error = max_error;
                 best_magic = magic;
-                best_stats = candidate_stats;
+                best_avg_error = avg_error;
             }
         }
     }
 
     void join(const MagicReducer& rhs) {
-        if (!rhs.has_best) {
-            return;
-        }
-        if (!has_best || rhs.best_objective < best_objective) {
-            has_best = true;
-            best_objective = rhs.best_objective;
+        if (rhs.min_max_error < min_max_error) {
+            min_max_error = rhs.min_max_error;
             best_magic = rhs.best_magic;
-            best_stats = rhs.best_stats;
+            best_avg_error = rhs.best_avg_error;
         }
     }
 };
 
 // [[Rcpp::export]]
-DataFrame search_optimal_constant(NumericVector floats,
-                                 IntegerVector magics,
-                                 int NRmax,
-                                 std::string objective_metric,
-                                 CharacterVector metrics_to_report) {
+DataFrame search_optimal_constant(NumericVector floats, IntegerVector magics, int NRmax) {
     if (magics.length() == 0) {
         stop("`magics` must contain at least one candidate");
     }
-    if (floats.length() == 0) {
-        stop("`floats` must contain at least one sample");
-    }
 
-    MetricId objective = parse_metric_name(objective_metric);
-
-    R_xlen_t n_metrics = metrics_to_report.length();
-    std::vector<MetricId> metrics;
-    metrics.reserve(static_cast<std::size_t>(n_metrics));
-    for (R_xlen_t i = 0; i < n_metrics; ++i) {
-        if (metrics_to_report[i] == NA_STRING) {
-            stop("`metrics_to_report` must not contain missing values");
-        }
-        std::string raw = as<std::string>(metrics_to_report[i]);
-        MetricId parsed = parse_metric_name(raw);
-        if (std::find(metrics.begin(), metrics.end(), parsed) == metrics.end()) {
-            metrics.push_back(parsed);
-        }
-    }
-
-    MagicReducer reducer(floats, magics, NRmax, objective);
+    MagicReducer reducer(floats, magics, NRmax);
     parallelReduce(0, magics.length(), reducer);
 
-    if (!reducer.has_best) {
-        stop("No admissible magic constant was evaluated");
-    }
-
-    List output;
-    output.push_back(static_cast<double>(reducer.best_magic), "Magic");
-    output.push_back(reducer.best_objective, column_name(objective, /*objective=*/true));
-
-    double sample_count = static_cast<double>(floats.length());
-    for (MetricId metric : metrics) {
-        double value = evaluate_metric(metric, reducer.best_stats, sample_count);
-        output.push_back(value, column_name(metric, /*objective=*/false));
-    }
-
-    return DataFrame(output);
+    return DataFrame::create(
+        Named("Magic") = reducer.best_magic,
+        Named("Avg_Relative_Error") = reducer.best_avg_error,
+        Named("Max_Relative_Error") = reducer.min_max_error
+    );
 }
