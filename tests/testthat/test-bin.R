@@ -6,8 +6,8 @@ test_that("frsr_bin returns documented columns", {
     "Range_Min",
     "Range_Max",
     "Magic",
-    "Max_Relative_Error",
-    "Avg_Relative_Error"
+    "Objective",
+    "Dependent"
   )
 
   expect_s3_class(result, "data.frame")
