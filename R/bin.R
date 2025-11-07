@@ -59,6 +59,63 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
                      float_samples = 1024, magic_samples = 2048,
                      magic_min = 1596980000L,
                      magic_max = 1598050000L) {
+  if (!is.numeric(x_min) || length(x_min) != 1L || !is.finite(x_min)) {
+    stop("`x_min` must be a finite numeric scalar", call. = FALSE)
+  }
+  if (!is.numeric(x_max) || length(x_max) != 1L || !is.finite(x_max)) {
+    stop("`x_max` must be a finite numeric scalar", call. = FALSE)
+  }
+  if (x_min >= x_max) {
+    stop("`x_min` must be less than `x_max`", call. = FALSE)
+  }
+
+  if (!is.numeric(n_bins) || length(n_bins) != 1L || is.na(n_bins)) {
+    stop("`n_bins` must be at least 1", call. = FALSE)
+  }
+  n_bins <- as.integer(n_bins)
+  if (is.na(n_bins) || n_bins < 1L) {
+    stop("`n_bins` must be at least 1", call. = FALSE)
+  }
+
+  if (!is.numeric(float_samples) || length(float_samples) != 1L || is.na(float_samples)) {
+    stop("`float_samples` must be at least 1", call. = FALSE)
+  }
+  float_samples <- as.integer(float_samples)
+  if (is.na(float_samples) || float_samples < 1L) {
+    stop("`float_samples` must be at least 1", call. = FALSE)
+  }
+
+  if (!is.numeric(magic_samples) || length(magic_samples) != 1L || is.na(magic_samples)) {
+    stop("`magic_samples` must be at least 1", call. = FALSE)
+  }
+  magic_samples <- as.integer(magic_samples)
+  if (is.na(magic_samples) || magic_samples < 1L) {
+    stop("`magic_samples` must be at least 1", call. = FALSE)
+  }
+
+  if (!is.numeric(magic_min) || length(magic_min) != 1L || !is.finite(magic_min)) {
+    stop("`magic_min` must be a finite integer scalar", call. = FALSE)
+  }
+  if (!is.numeric(magic_max) || length(magic_max) != 1L || !is.finite(magic_max)) {
+    stop("`magic_max` must be a finite integer scalar", call. = FALSE)
+  }
+  magic_min <- as.integer(magic_min)
+  magic_max <- as.integer(magic_max)
+  if (is.na(magic_min) || is.na(magic_max)) {
+    stop("`magic_min` and `magic_max` must be representable as 32-bit integers", call. = FALSE)
+  }
+  if (magic_min > magic_max) {
+    stop("`magic_min` must be less than or equal to `magic_max`", call. = FALSE)
+  }
+
+  if (!is.numeric(NRmax) || length(NRmax) != 1L || !is.finite(NRmax)) {
+    stop("`NRmax` must be a finite numeric scalar", call. = FALSE)
+  }
+  NRmax <- as.integer(NRmax)
+  if (is.na(NRmax) || NRmax < 0L) {
+    stop("`NRmax` must be a non-negative integer", call. = FALSE)
+  }
+
   # Divide [x_min, x_max] into evenly spaced bin boundaries
   bin_edges <- seq(x_min, x_max, length.out = n_bins + 1)
   
