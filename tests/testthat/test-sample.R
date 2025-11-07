@@ -29,3 +29,34 @@ test_that("frsr_sample returns correct structure", {
     result <- frsr_sample(4)
     expect_true(all(c("input", "initial", "after_one", "final", "error", "enre", "diff", "iters") %in% names(result)))
 })
+
+test_that("boundedStratifiedSample handles narrow exponent ranges", {
+    low <- log2(0.75)
+    high <- log2(1)
+
+    samples <- .Call(
+        "_frsrr_boundedStratifiedSample",
+        PACKAGE = "frsrr",
+        32L,
+        low,
+        high
+    )
+
+    expect_length(samples, 32)
+    expect_true(all(is.finite(samples)))
+    expect_true(all(samples >= 0.75))
+    expect_true(all(samples < 1))
+})
+
+test_that("boundedStratifiedSample tolerates zero bit draws", {
+    samples <- .Call(
+        "_frsrr_boundedStratifiedSample",
+        PACKAGE = "frsrr",
+        1024L,
+        log2(0.25),
+        log2(0.5)
+    )
+
+    expect_length(samples, 1024)
+    expect_true(all(is.finite(samples)))
+})
