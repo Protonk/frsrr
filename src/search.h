@@ -2,6 +2,7 @@
 #define FRSR_SEARCH_H
 
 #include <Rcpp.h>
+#include <string>
 
 using namespace Rcpp;
 
@@ -9,9 +10,7 @@ NumericVector bounded_stratified_sample(int n, double low, double high, bool wei
 DataFrame search_optimal_constant(NumericVector floats,
                                  IntegerVector magics,
                                  int NRmax = 0,
-                                 bool return_mean_error = true,
-                                 bool return_sum_error = false,
-                                 bool return_rms_error = false,
-                                 bool return_variance_error = false);
+                                 std::string objective_metric = "max",
+                                 CharacterVector metrics_to_report = CharacterVector::create("mean"));
 
 #endif // FRSR_SEARCH_H

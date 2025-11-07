@@ -3,9 +3,11 @@
 #include <RcppParallel.h>
 #include <algorithm>
 #include <bit>
+#include <cctype>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "frsr.h"
@@ -36,44 +38,97 @@ inline uint32_t sample_offset(uint32_t range) {
     return draw;
 }
 
-// Evaluate the absolute relative errors for the selected magic constant across
-// every sampled float and accumulate only the scalars requested by the caller.
-struct RequestedMetrics {
-    bool want_sum;
-    bool want_mean;
-    bool want_rms;
-    bool want_variance;
+enum class MetricId {
+    kMax,
+    kMean,
+    kSum,
+    kRms,
+    kVariance,
 };
 
-struct MetricAccumulators {
+std::string normalize_metric_name(const std::string& raw) {
+    std::string normalized;
+    normalized.reserve(raw.size());
+    for (char ch : raw) {
+        unsigned char uch = static_cast<unsigned char>(ch);
+        if (std::isalnum(uch)) {
+            normalized.push_back(static_cast<char>(std::tolower(uch)));
+        }
+    }
+    return normalized;
+}
+
+MetricId parse_metric_name(const std::string& raw) {
+    std::string normalized = normalize_metric_name(raw);
+    if (normalized == "max" || normalized == "maximum") {
+        return MetricId::kMax;
+    }
+    if (normalized == "mean" || normalized == "average") {
+        return MetricId::kMean;
+    }
+    if (normalized == "sum" || normalized == "total") {
+        return MetricId::kSum;
+    }
+    if (normalized == "rms" || normalized == "rootmeansquare") {
+        return MetricId::kRms;
+    }
+    if (normalized == "variance") {
+        return MetricId::kVariance;
+    }
+
+    stop("Unsupported metric: `" + raw + "`");
+}
+
+std::string metric_label(MetricId metric) {
+    switch (metric) {
+    case MetricId::kMax:
+        return "Max";
+    case MetricId::kMean:
+        return "Mean";
+    case MetricId::kSum:
+        return "Sum";
+    case MetricId::kRms:
+        return "RootMeanSquare";
+    case MetricId::kVariance:
+        return "Variance";
+    }
+    return "";
+}
+
+std::string column_name(MetricId metric, bool objective) {
+    std::string prefix = objective ? "Objective_" : "Metric_";
+    return prefix + metric_label(metric);
+}
+
+struct CandidateStats {
     double sum = 0.0;
     double sum_sq = 0.0;
+    double max = 0.0;
 };
 
-MetricAccumulators accumulate_errors(const NumericVector& floats,
-                                     uint32_t magic,
-                                     int NRmax,
-                                     const RequestedMetrics& request) {
-    MetricAccumulators acc;
-    if (!request.want_sum && !request.want_rms && !request.want_variance) {
-        return acc;
+double evaluate_metric(MetricId metric, const CandidateStats& stats, double sample_count) {
+    switch (metric) {
+    case MetricId::kMax:
+        return stats.max;
+    case MetricId::kMean:
+        return stats.sum / sample_count;
+    case MetricId::kSum:
+        return stats.sum;
+    case MetricId::kRms: {
+        double mean_square = stats.sum_sq / sample_count;
+        return std::sqrt(mean_square);
     }
-
-    for (int j = 0; j < floats.length(); ++j) {
-        float x = floats[j];
-        float approx = frsr0(x, magic, NRmax);
-        float actual = 1.0f / std::sqrt(x);
-        float rel_error = std::abs((approx - actual) / actual);
-
-        if (request.want_sum || request.want_mean || request.want_variance) {
-            acc.sum += static_cast<double>(rel_error);
+    case MetricId::kVariance: {
+        double mean = stats.sum / sample_count;
+        double mean_square = stats.sum_sq / sample_count;
+        double variance = mean_square - mean * mean;
+        if (variance < 0.0 && std::abs(variance) < 1e-15) {
+            variance = 0.0;
         }
-        if (request.want_rms || request.want_variance) {
-            acc.sum_sq += static_cast<double>(rel_error) * static_cast<double>(rel_error);
-        }
+        return variance;
     }
-
-    return acc;
+    }
+    stop("Unsupported metric id");
 }
 
 }  // namespace
@@ -214,72 +269,87 @@ NumericVector bounded_stratified_sample(int n, double low, double high, bool wei
 }
 
 // Parallel reducer that scans the candidate magic constants and tracks the
-// constant that minimises the maximum absolute relative error. Each worker
+// constant that minimises the caller-selected objective metric. Each worker
 // keeps the best candidate for its partition; the final join retains the
-// overall best.
+// overall best summary statistics.
 struct MagicReducer : public Worker {
     const RVector<double> floats;
     const RVector<int> magics;
     const int NRmax;
+    const MetricId objective;
 
     uint32_t best_magic;
-    float min_max_error;
-    float best_avg_error;
+    CandidateStats best_stats;
+    double best_objective;
+    bool has_best;
 
     MagicReducer(const NumericVector floats,
                  const IntegerVector magics,
-                 int NRmax)
+                 int NRmax,
+                 MetricId objective_metric)
         : floats(floats),
           magics(magics),
           NRmax(NRmax),
-          best_magic(static_cast<uint32_t>(magics[0])),
-          min_max_error(std::numeric_limits<float>::max()),
-          best_avg_error(0.0f) {}
+          objective(objective_metric),
+          best_magic(0u),
+          best_stats(),
+          best_objective(std::numeric_limits<double>::infinity()),
+          has_best(false) {}
 
     MagicReducer(const MagicReducer& reducer, Split)
         : floats(reducer.floats),
           magics(reducer.magics),
           NRmax(reducer.NRmax),
-          best_magic(static_cast<uint32_t>(reducer.magics[0])),
-          min_max_error(std::numeric_limits<float>::max()),
-          best_avg_error(0.0f) {}
+          objective(reducer.objective),
+          best_magic(0u),
+          best_stats(),
+          best_objective(std::numeric_limits<double>::infinity()),
+          has_best(false) {}
 
     void operator()(std::size_t begin, std::size_t end) {
+        double sample_count = static_cast<double>(floats.length());
         for (std::size_t i = begin; i < end; ++i) {
             uint32_t magic = static_cast<uint32_t>(magics[i]);
-            float total_error = 0.0f;
-            float max_error = 0.0f;
+            CandidateStats candidate_stats;
 
-            // Evaluate the current candidate across all sampled floats. The
-            // reducer keeps track of both the supremum of the error (used as the
-            // optimisation objective) and the accumulated totals needed for
-            // optional summaries.
+            // Evaluate the current candidate across all sampled floats and
+            // accumulate the sufficient statistics required to evaluate any of
+            // the scalar metrics supported by the reducer.
             for (int j = 0; j < floats.length(); ++j) {
                 float x = floats[j];
                 float approx = frsr0(x, magic, NRmax);
                 float actual = 1.0f / std::sqrt(x);
-                float rel_error = std::abs((approx - actual) / actual);
-                total_error += rel_error;
-                if (rel_error > max_error) {
-                    max_error = rel_error;
+                // The per-sample metric captures the absolute relative difference between the
+                // approximation and the true reciprocal square root. Downstream aggregations derive
+                // various scalar summaries (e.g., RMS, sum) from these measurements.
+                double sample_measure = std::abs((approx - actual) / actual);
+                candidate_stats.sum += sample_measure;
+                candidate_stats.sum_sq += sample_measure * sample_measure;
+                if (sample_measure > candidate_stats.max) {
+                    candidate_stats.max = sample_measure;
                 }
             }
 
-            float avg_error = total_error / floats.length();
+            double objective_value = evaluate_metric(objective, candidate_stats, sample_count);
 
-            if (max_error < min_max_error) {
-                min_max_error = max_error;
+            if (!has_best || objective_value < best_objective) {
+                has_best = true;
+                best_objective = objective_value;
                 best_magic = magic;
-                best_avg_error = avg_error;
+                best_stats = candidate_stats;
             }
         }
     }
 
     void join(const MagicReducer& rhs) {
-        if (rhs.min_max_error < min_max_error) {
-            min_max_error = rhs.min_max_error;
+        if (!rhs.has_best) {
+            return;
+        }
+        if (!has_best || rhs.best_objective < best_objective) {
+            has_best = true;
+            best_objective = rhs.best_objective;
             best_magic = rhs.best_magic;
-            best_avg_error = rhs.best_avg_error;
+            best_stats = rhs.best_stats;
         }
     }
 };
@@ -288,10 +358,8 @@ struct MagicReducer : public Worker {
 DataFrame search_optimal_constant(NumericVector floats,
                                  IntegerVector magics,
                                  int NRmax,
-                                 bool return_mean_error /*= true*/,
-                                 bool return_sum_error /*= false*/,
-                                 bool return_rms_error /*= false*/,
-                                 bool return_variance_error /*= false*/) {
+                                 std::string objective_metric,
+                                 CharacterVector metrics_to_report) {
     if (magics.length() == 0) {
         stop("`magics` must contain at least one candidate");
     }
@@ -299,45 +367,37 @@ DataFrame search_optimal_constant(NumericVector floats,
         stop("`floats` must contain at least one sample");
     }
 
-    MagicReducer reducer(floats, magics, NRmax);
+    MetricId objective = parse_metric_name(objective_metric);
+
+    R_xlen_t n_metrics = metrics_to_report.length();
+    std::vector<MetricId> metrics;
+    metrics.reserve(static_cast<std::size_t>(n_metrics));
+    for (R_xlen_t i = 0; i < n_metrics; ++i) {
+        if (metrics_to_report[i] == NA_STRING) {
+            stop("`metrics_to_report` must not contain missing values");
+        }
+        std::string raw = as<std::string>(metrics_to_report[i]);
+        MetricId parsed = parse_metric_name(raw);
+        if (std::find(metrics.begin(), metrics.end(), parsed) == metrics.end()) {
+            metrics.push_back(parsed);
+        }
+    }
+
+    MagicReducer reducer(floats, magics, NRmax, objective);
     parallelReduce(0, magics.length(), reducer);
 
-    // Decide which expensive aggregates to compute for the winning magic. Each
-    // additional scalar requires a full sweep of the float samples, so we honor
-    // only the pieces of information the caller explicitly requested.
-    RequestedMetrics request{
-        /*want_sum=*/return_sum_error,
-        /*want_mean=*/return_mean_error,
-        /*want_rms=*/return_rms_error,
-        /*want_variance=*/return_variance_error};
-
-    MetricAccumulators acc = accumulate_errors(floats, reducer.best_magic, NRmax, request);
+    if (!reducer.has_best) {
+        stop("No admissible magic constant was evaluated");
+    }
 
     List output;
     output.push_back(static_cast<double>(reducer.best_magic), "Magic");
-    output.push_back(static_cast<double>(reducer.min_max_error), "Error_Objective");
+    output.push_back(reducer.best_objective, column_name(objective, /*objective=*/true));
 
-    if (return_mean_error) {
-        output.push_back(static_cast<double>(reducer.best_avg_error), "Error_Mean");
-    }
-    if (return_sum_error) {
-        output.push_back(acc.sum, "Error_Sum");
-    }
-    if (return_rms_error) {
-        double count = static_cast<double>(floats.length());
-        double mean_square = acc.sum_sq / count;
-        output.push_back(std::sqrt(mean_square), "Error_RootMeanSquare");
-    }
-    if (return_variance_error) {
-        double count = static_cast<double>(floats.length());
-        double mean_error = return_mean_error ? static_cast<double>(reducer.best_avg_error)
-                                              : acc.sum / count;
-        double mean_square = acc.sum_sq / count;
-        double variance = mean_square - mean_error * mean_error;
-        if (variance < 0.0 && std::abs(variance) < 1e-15) {
-            variance = 0.0;  // Guard minor floating point drift below zero.
-        }
-        output.push_back(variance, "Error_Variance");
+    double sample_count = static_cast<double>(floats.length());
+    for (MetricId metric : metrics) {
+        double value = evaluate_metric(metric, reducer.best_stats, sample_count);
+        output.push_back(value, column_name(metric, /*objective=*/false));
     }
 
     return DataFrame(output);
