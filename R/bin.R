@@ -6,7 +6,7 @@ NULL
 #' FRSR Bin
 #'
 #' Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins
-#' by minimizing the maximum relative error. 
+#' by minimizing the maximum error according to the selected metric.
 #'
 #' @param x_min Numeric. Default is 0.25.
 #' @param x_max Numeric. Default is 1.0.
@@ -27,14 +27,14 @@ NULL
 #'     \item{Range_Min}{Minimum value of the bin range}
 #'     \item{Range_Max}{Maximum value of the bin range}
 #'     \item{Magic}{Optimal magic constant as an integer}
-#'     \item{Max_Relative_Error}{Minimum max relative error for the bin}
-#'     \item{Avg_Relative_Error}{Average relative error associated with minimax magic constant}
+#'     \item{Error_Objective}{Objective value: the minimised maximum error metric}
+#'     \item{Error_Mean}{Mean error associated with the optimal magic}
 #'
 #' @details
 #' This function divides the range [x_min, x_max] into n_bins bins and generates float_samples
 #' floating-point samples within each bin. It then tests magic_samples magic constants within
 #' the range [magic_min, magic_max] to find the optimal magic constant for each bin that minimizes
-#' the maximum relative error per bin. The achievable error and optimal constants will change with
+#' the maximum error per bin under the chosen metric. The achievable error and optimal constants will change with
 #' bin size and number of bins, as well as the integer and float samples. 
 #' 
 #' The FRSR is periodic over 0.25 to 1.0 with a magic constant of 0x5f3759df. I don't know if 
@@ -141,7 +141,8 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     # Call the C++ function to compute optimal magic constant
     result <- .Call('_frsrr_search_optimal_constant',
                     PACKAGE = 'frsrr',
-                    floats, magics, NRmax)
+                    floats, magics, NRmax,
+                    TRUE, FALSE, FALSE, FALSE)
     
     # Return results as a data frame
     output <- data.frame(
@@ -161,7 +162,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     "Range_Min",
     "Range_Max",
     "Magic",
-    "Max_Relative_Error",
-    "Avg_Relative_Error"
+    "Error_Objective",
+    "Error_Mean"
   )]
 }

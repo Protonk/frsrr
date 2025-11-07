@@ -6,6 +6,12 @@
 using namespace Rcpp;
 
 NumericVector bounded_stratified_sample(int n, double low, double high, bool weighted = false);
-DataFrame search_optimal_constant(NumericVector floats, IntegerVector magics, int NRmax = 0);
+DataFrame search_optimal_constant(NumericVector floats,
+                                 IntegerVector magics,
+                                 int NRmax = 0,
+                                 bool return_mean_error = true,
+                                 bool return_sum_error = false,
+                                 bool return_rms_error = false,
+                                 bool return_variance_error = false);
 
 #endif // FRSR_SEARCH_H
