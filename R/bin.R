@@ -15,6 +15,9 @@ NULL
 #' @param magic_samples Integer. The number of magic constant samples to generate per bin.
 #' @param magic_min Integer. The minimum magic constant to test (default: 1596980000).
 #' @param magic_max Integer. The maximum magic constant to test (default: 1598050000).
+#' @param weighted Logical; if \code{TRUE}, weight the float sampler by the
+#'   number of representable significands in each exponent stratum. Default is
+#'   \code{FALSE}.
 #' @param NRmax Integer. The maximum number of Newton-Raphson iterations (default: 0).
 #'
 #' @return
@@ -58,7 +61,8 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
                      n_bins = 4, NRmax = 0,
                      float_samples = 1024, magic_samples = 2048,
                      magic_min = 1596980000L,
-                     magic_max = 1598050000L) {
+                     magic_max = 1598050000L,
+                     weighted = FALSE) {
   if (!is.numeric(x_min) || length(x_min) != 1L || !is.finite(x_min)) {
     stop("`x_min` must be a finite numeric scalar", call. = FALSE)
   }
@@ -116,6 +120,10 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     stop("`NRmax` must be a non-negative integer", call. = FALSE)
   }
 
+  if (!is.logical(weighted) || length(weighted) != 1L || is.na(weighted)) {
+    stop("`weighted` must be a non-missing logical scalar", call. = FALSE)
+  }
+
   # Divide [x_min, x_max] into evenly spaced bin boundaries
   bin_edges <- seq(x_min, x_max, length.out = n_bins + 1)
   
@@ -126,7 +134,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     # Pass exponent bounds because the sampler stratifies floats by log2 exponent range
     floats <- .Call('_frsrr_boundedStratifiedSample',
                     PACKAGE = 'frsrr',
-                    float_samples, log2(bin_min), log2(bin_max))
+                    float_samples, log2(bin_min), log2(bin_max), weighted)
     magics <- sample(magic_min:magic_max,
                      size = magic_samples,
                      replace = TRUE)

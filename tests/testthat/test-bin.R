@@ -16,6 +16,12 @@ test_that("frsr_bin returns documented columns", {
   expect_identical(unique(result$N_bins), 4L)
 })
 
+test_that("frsr_bin supports weighted sampling", {
+  result <- frsr_bin(float_samples = 8, magic_samples = 8, weighted = TRUE)
+  expect_s3_class(result, "data.frame")
+  expect_true(all(is.finite(unlist(result))))
+})
+
 test_that("frsr_bin handles different number of bins", {
   result <- frsr_bin(n_bins = 2, float_samples = 10, magic_samples = 10)
   expect_equal(nrow(result), 2)

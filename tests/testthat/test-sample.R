@@ -1,6 +1,9 @@
 test_that("frsr_sample returns correct number of samples", {
     result <- frsr_sample(4)
     expect_equal(nrow(result), 4)
+
+    weighted_result <- frsr_sample(4, weighted = TRUE)
+    expect_equal(nrow(weighted_result), 4)
 })
 
 test_that("frsr_sample returns parameters when keep_params is TRUE", {
@@ -44,7 +47,8 @@ test_that("boundedStratifiedSample handles narrow exponent ranges", {
         PACKAGE = "frsrr",
         32L,
         low,
-        high
+        high,
+        FALSE
     )
 
     expect_length(samples, 32)
@@ -59,9 +63,26 @@ test_that("boundedStratifiedSample tolerates zero bit draws", {
         PACKAGE = "frsrr",
         1024L,
         log2(0.25),
-        log2(0.5)
+        log2(0.5),
+        FALSE
     )
 
     expect_length(samples, 1024)
     expect_true(all(is.finite(samples)))
+})
+
+test_that("boundedStratifiedSample supports weighted sampling", {
+    samples <- .Call(
+        "_frsrr_boundedStratifiedSample",
+        PACKAGE = "frsrr",
+        64L,
+        log2(0.5),
+        log2(2),
+        TRUE
+    )
+
+    expect_length(samples, 64)
+    expect_true(all(is.finite(samples)))
+    expect_true(all(samples >= 0.5))
+    expect_true(all(samples < 2))
 })

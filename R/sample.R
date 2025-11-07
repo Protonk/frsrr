@@ -11,6 +11,8 @@ NULL
 #' @param magic_max Maximum value for the magic number range. Default is \code{1598050000L}
 #' @param x_min Minimum value for the input range. Default is \code{0.25}
 #' @param x_max Maximum value for the input range. Default is \code{1.0}
+#' @param weighted Logical; if \code{TRUE}, weight the sampler by the number of
+#'   admissible significands in each exponent stratum. Default is \code{FALSE}.
 #' @param ... Additional arguments passed to \code{frsr}.
 #'
 #' @details 
@@ -74,9 +76,11 @@ NULL
 
 #' @rdname frsr_sample
 #' @export
-frsr_sample <- function(n, 
-                        magic_min = 1596980000L, magic_max = 1598050000L, 
-                        x_min = 0.25, x_max = 1.0, ...) {
+frsr_sample <- function(n,
+                        magic_min = 1596980000L, magic_max = 1598050000L,
+                        x_min = 0.25, x_max = 1.0,
+                        weighted = FALSE,
+                        ...) {
     # Determine magic numbers based on whether magic_min or magic_max is NULL
     magic_numbers <- if (is.null(magic_min)) {
         rep(magic_max, n)  # Use magic_max if magic_min is NULL
@@ -86,15 +90,19 @@ frsr_sample <- function(n,
         sample(magic_min:magic_max, n, replace = TRUE)
     }
     # Determine inputs based on whether x_min or x_max is NULL
+    if (!is.logical(weighted) || length(weighted) != 1L || is.na(weighted)) {
+        stop("`weighted` must be a non-missing logical scalar", call. = FALSE)
+    }
+
     inputs <- if (is.null(x_min)) {
         rep(x_max, n)  # Use x_max if x_min is NULL
     } else if (is.null(x_max)) {
         rep(x_min, n)  # Use x_min if x_max is NULL
     } else {
-    # Forward log2 bounds because the C++ helper samples uniformly across exponent strata
-    .Call('_frsrr_boundedStratifiedSample',
-          PACKAGE = 'frsrr',
-          n, log2(x_min), log2(x_max))
+        # Forward log2 bounds because the C++ helper samples uniformly across exponent strata
+        .Call('_frsrr_boundedStratifiedSample',
+              PACKAGE = 'frsrr',
+              n, log2(x_min), log2(x_max), weighted)
     }
     # Call frsr with generated inputs and parameters
     frsr(x = inputs, magic = magic_numbers, detail = TRUE, ...)
