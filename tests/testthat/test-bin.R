@@ -6,8 +6,8 @@ test_that("frsr_bin returns documented columns", {
     "Range_Min",
     "Range_Max",
     "Magic",
-    "Max_Relative_Error",
-    "Avg_Relative_Error"
+    "Objective_Max",
+    "Metric_Mean"
   )
 
   expect_s3_class(result, "data.frame")
@@ -41,6 +41,30 @@ test_that("frsr_bin validates parameters", {
     "`magic_min` must be less than or equal to `magic_max`",
     fixed = TRUE
   )
+
+  expect_error(
+    frsr_bin(metrics_to_report = character()),
+    "`metrics_to_report` must contain at least one metric name",
+    fixed = TRUE
+  )
+
+  expect_error(
+    frsr_bin(objective_metric = ""),
+    "`objective_metric` must not be empty",
+    fixed = TRUE
+  )
+})
+
+test_that("frsr_bin supports configurable metrics", {
+  result <- frsr_bin(
+    float_samples = 8,
+    magic_samples = 8,
+    objective_metric = "rms",
+    metrics_to_report = c("sum", "mean", "sum")
+  )
+
+  expected_metrics <- c("Magic", "Objective_RootMeanSquare", "Metric_Sum", "Metric_Mean")
+  expect_identical(names(result)[5:8], expected_metrics)
 })
 
 test_that("frsr_bin returns expected bin metadata and magic bounds", {

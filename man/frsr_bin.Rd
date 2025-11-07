@@ -39,8 +39,8 @@ A data frame with columns:
     \item{Range_Min}{Minimum value of the bin range}
     \item{Range_Max}{Maximum value of the bin range}
     \item{Magic}{Optimal magic constant as an integer}
-    \item{Max_Relative_Error}{Minimum max relative error for the bin}
-    \item{Avg_Relative_Error}{Average relative error associated with minimax magic constant}
+    \item{Error_Objective}{Objective value: the minimised maximum relative error for the bin}
+    \item{Error_Mean}{Mean relative error associated with the optimal magic constant}
 }
 \description{
 Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins
