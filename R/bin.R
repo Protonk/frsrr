@@ -132,14 +132,14 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     bin_min <- bin_edges[i]
     bin_max <- bin_edges[i + 1]
     # Pass exponent bounds because the sampler stratifies floats by log2 exponent range
-    floats <- .Call('_frsrr_boundedStratifiedSample',
+    floats <- .Call('_frsrr_bounded_stratified_sample',
                     PACKAGE = 'frsrr',
                     float_samples, log2(bin_min), log2(bin_max), weighted)
     magics <- sample(magic_min:magic_max,
                      size = magic_samples,
                      replace = TRUE)
     # Call the C++ function to compute optimal magic constant
-    result <- .Call('_frsrr_optimal_constant_search',
+    result <- .Call('_frsrr_search_optimal_constant',
                     PACKAGE = 'frsrr',
                     floats, magics, NRmax)
     

@@ -38,12 +38,12 @@ test_that("frsr_sample returns documented columns", {
     expect_true(all(vapply(result, is.numeric, logical(1))))
 })
 
-test_that("boundedStratifiedSample handles narrow exponent ranges", {
+test_that("bounded_stratified_sample handles narrow exponent ranges", {
     low <- log2(0.75)
     high <- log2(1)
 
     samples <- .Call(
-        "_frsrr_boundedStratifiedSample",
+        "_frsrr_bounded_stratified_sample",
         PACKAGE = "frsrr",
         32L,
         low,
@@ -57,9 +57,9 @@ test_that("boundedStratifiedSample handles narrow exponent ranges", {
     expect_true(all(samples < 1))
 })
 
-test_that("boundedStratifiedSample tolerates zero bit draws", {
+test_that("bounded_stratified_sample tolerates zero bit draws", {
     samples <- .Call(
-        "_frsrr_boundedStratifiedSample",
+        "_frsrr_bounded_stratified_sample",
         PACKAGE = "frsrr",
         1024L,
         log2(0.25),
@@ -71,9 +71,9 @@ test_that("boundedStratifiedSample tolerates zero bit draws", {
     expect_true(all(is.finite(samples)))
 })
 
-test_that("boundedStratifiedSample supports weighted sampling", {
+test_that("bounded_stratified_sample supports weighted sampling", {
     samples <- .Call(
-        "_frsrr_boundedStratifiedSample",
+        "_frsrr_bounded_stratified_sample",
         PACKAGE = "frsrr",
         64L,
         log2(0.5),

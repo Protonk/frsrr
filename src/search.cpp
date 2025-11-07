@@ -1,21 +1,39 @@
-#include <Rcpp.h>
+#include "search.h"
+
+#include <RcppParallel.h>
+#include <algorithm>
 #include <bit>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
 #include <vector>
-#include <algorithm>
+
+#include "frsr.h"
 
 using namespace Rcpp;
+using namespace RcppParallel;
 
-// Utility functions
-inline float FromBits(uint32_t b) { return std::bit_cast<float>(b); }
+namespace {
+inline float FromBits(uint32_t bits) {
+    return std::bit_cast<float>(bits);
+}
 
-// Accept log2 exponent bounds even though they arrive as doubles. Allowing
-// fractional exponents gives callers partially open intervals when mapping back
-// to float space.
+inline uint32_t sample_offset(uint32_t range) {
+    if (range == 0u) {
+        return 0u;
+    }
+    double u = unif_rand();
+    double scaled = u * static_cast<double>(range);
+    uint32_t draw = static_cast<uint32_t>(scaled);
+    if (draw >= range) {
+        draw = range - 1u;
+    }
+    return draw;
+}
+}
+
 // [[Rcpp::export]]
-NumericVector boundedStratifiedSample(int n, double low, double high, bool weighted = false) {
+NumericVector bounded_stratified_sample(int n, double low, double high, bool weighted) {
     if (n < 0) {
         throw std::invalid_argument("`n` must be non-negative");
     }
@@ -96,19 +114,6 @@ NumericVector boundedStratifiedSample(int n, double low, double high, bool weigh
 
     NumericVector result(n);
 
-    auto sample_offset = [&](uint32_t range) -> uint32_t {
-        if (range == 0u) {
-            return 0u;
-        }
-        double u = unif_rand();
-        double scaled = u * static_cast<double>(range);
-        uint32_t draw = static_cast<uint32_t>(scaled);
-        if (draw >= range) {
-            draw = range - 1u;
-        }
-        return draw;
-    };
-
     if (!weighted) {
         const std::size_t k = strata.size();
         const std::size_t start = sample_offset(static_cast<uint32_t>(k));
@@ -150,4 +155,81 @@ NumericVector boundedStratifiedSample(int n, double low, double high, bool weigh
     }
 
     return result;
+}
+
+struct MagicReducer : public Worker {
+    const RVector<double> floats;
+    const RVector<int> magics;
+    const int NRmax;
+
+    uint32_t best_magic;
+    float min_max_error;
+    float best_avg_error;
+
+    MagicReducer(const NumericVector floats, const IntegerVector magics, int NRmax)
+        : floats(floats),
+          magics(magics),
+          NRmax(NRmax),
+          best_magic(static_cast<uint32_t>(magics[0])),
+          min_max_error(std::numeric_limits<float>::max()),
+          best_avg_error(0.0f) {}
+
+    MagicReducer(const MagicReducer& reducer, Split)
+        : floats(reducer.floats),
+          magics(reducer.magics),
+          NRmax(reducer.NRmax),
+          best_magic(static_cast<uint32_t>(reducer.magics[0])),
+          min_max_error(std::numeric_limits<float>::max()),
+          best_avg_error(0.0f) {}
+
+    void operator()(std::size_t begin, std::size_t end) {
+        for (std::size_t i = begin; i < end; ++i) {
+            uint32_t magic = static_cast<uint32_t>(magics[i]);
+            float total_error = 0.0f;
+            float max_error = 0.0f;
+
+            for (int j = 0; j < floats.length(); ++j) {
+                float x = floats[j];
+                float approx = frsr0(x, magic, NRmax);
+                float actual = 1.0f / std::sqrt(x);
+                float rel_error = std::abs((approx - actual) / actual);
+                total_error += rel_error;
+                if (rel_error > max_error) {
+                    max_error = rel_error;
+                }
+            }
+
+            float avg_error = total_error / floats.length();
+
+            if (max_error < min_max_error) {
+                min_max_error = max_error;
+                best_magic = magic;
+                best_avg_error = avg_error;
+            }
+        }
+    }
+
+    void join(const MagicReducer& rhs) {
+        if (rhs.min_max_error < min_max_error) {
+            min_max_error = rhs.min_max_error;
+            best_magic = rhs.best_magic;
+            best_avg_error = rhs.best_avg_error;
+        }
+    }
+};
+
+// [[Rcpp::export]]
+DataFrame search_optimal_constant(NumericVector floats, IntegerVector magics, int NRmax) {
+    if (magics.length() == 0) {
+        stop("`magics` must contain at least one candidate");
+    }
+
+    MagicReducer reducer(floats, magics, NRmax);
+    parallelReduce(0, magics.length(), reducer);
+
+    return DataFrame::create(
+        Named("Magic") = reducer.best_magic,
+        Named("Avg_Relative_Error") = reducer.best_avg_error,
+        Named("Max_Relative_Error") = reducer.min_max_error
+    );
 }
