@@ -8,7 +8,7 @@
 #' @param NRmax Number of iterations to perform. Default is \code{1}.
 #' @param tol Tolerance level for stopping criterion. Default is \code{0}.
 #'
-#' @return 
+#' @return
 #' A data frame of \code{length(x)} rows with columns:
 #'    \item{input}{The input values}
 #'    \item{initial}{Initial approximation from integer operations}
@@ -16,6 +16,7 @@
 #'    \item{error}{Absolute relative error of final versus standard library}
 #'    \item{converged}{Whether the algorithm converged}
 #'    \item{conv_rate}{Mean rate of convergence}
+#'    \item{iters}{Number of iterations performed}
 #'
 #' @details
 #' While \code{frsr} uses C++ internally, this is difficult to do when 

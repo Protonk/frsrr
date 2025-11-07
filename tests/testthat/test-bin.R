@@ -1,6 +1,19 @@
-test_that("frsr_bin returns a data frame", {
-  result <- frsr_bin()
+test_that("frsr_bin returns documented columns", {
+  result <- frsr_bin(float_samples = 8, magic_samples = 8)
+  expected_cols <- c(
+    "N_bins",
+    "Location",
+    "Range_Min",
+    "Range_Max",
+    "Magic",
+    "Max_Relative_Error",
+    "Avg_Relative_Error"
+  )
+
   expect_s3_class(result, "data.frame")
+  expect_identical(names(result), expected_cols)
+  expect_true(all(vapply(result, is.numeric, logical(1))))
+  expect_identical(unique(result$N_bins), 4L)
 })
 
 test_that("frsr_bin handles different number of bins", {

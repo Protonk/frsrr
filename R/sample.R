@@ -26,7 +26,24 @@ NULL
 #' chosen because the the error of the FISR is periodic 
 #' from 0.25 to 1.0.
 #'
-#' @return A data frame with sampled values and optional details from \code{frsr}.
+#' @return
+#' A data frame with \code{n} rows. When \code{keep_params = FALSE} (the default), the
+#' columns match \code{frsr(..., detail = TRUE)}:
+#'     \item{input}{Sampled input values}
+#'     \item{initial}{Initial approximation from integer operations}
+#'     \item{after_one}{Result after one Newton-Raphson iteration}
+#'     \item{final}{Result from the last iteration}
+#'     \item{error}{Absolute relative error of the final result}
+#'     \item{enre}{Exponent-normalized absolute relative error}
+#'     \item{diff}{Difference between the final and penultimate approximations}
+#'     \item{iters}{Number of iterations performed}
+#'
+#' If \code{keep_params = TRUE}, the data frame will also include columns:
+#'     \item{magic}{Magic constant(s) used for each sample}
+#'     \item{NRmax}{Maximum number of Newton-Raphson iterations}
+#'     \item{A}{Newton-Raphson parameter A}
+#'     \item{B}{Newton-Raphson parameter B}
+#'     \item{tol}{Specified tolerance}
 #' 
 #' @seealso 
 #' 
