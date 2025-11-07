@@ -19,9 +19,9 @@
 #'    \item{iters}{Number of iterations performed}
 #'
 #' @details
-#' While \code{frsr} uses C++ internally, this is difficult to do when 
+#' While \code{frsr_compute} uses C++ internally, this is difficult to do when
 #' allowing the user to set a custom formula in an R-like idiom. This
-#' function will be much slower than \code{frsr}.
+#' function will be much slower than \code{frsr_compute}.
 #' 
 #' When \eqn{(A - B * x * y_n^2)} is the formula, B = A - 1
 #' must be true to ensure convergence. If you supply a different iteration step,
@@ -36,18 +36,18 @@
 #' \donttest{
 #' x <- c(1, 4, 9, 16)
 #' ex_formula <- quote(y * (1.5 - 0.5 * x * y^2))
-#' result <- frsr_NR(x, formula = ex_formula)
+#' result <- frsr_newton_custom(x, formula = ex_formula)
 #' print(result$final)
 #' # [1] 0.9990148 0.4995074 0.3337626 0.2497537
 #' }
 #' 
-#' @name frsr_NR
+#' @name frsr_newton_custom
 NULL
 
-#' @rdname frsr_NR
+#' @rdname frsr_newton_custom
 #' @export
-frsr_NR <- function(x, magic = 0x5f3759df, formula, NRmax = 1, tol = 0) {
-  y <- frsr(x, magic, NRmax = 0)
+frsr_newton_custom <- function(x, magic = 0x5f3759df, formula, NRmax = 1, tol = 0) {
+  y <- frsr_compute(x, magic, NRmax = 0)
   reference <- 1 / sqrt(x)
   iter <- 0
   initial <- y
@@ -82,4 +82,11 @@ frsr_NR <- function(x, magic = 0x5f3759df, formula, NRmax = 1, tol = 0) {
     conv_rate = (error_initial - error) / iter,
     iters = iter
   )
+}
+
+#' @rdname frsr_newton_custom
+#' @export
+frsr_NR <- function(x, magic = 0x5f3759df, formula, NRmax = 1, tol = 0) {
+  .Deprecated("frsr_newton_custom", package = "frsrr")
+  frsr_newton_custom(x = x, magic = magic, formula = formula, NRmax = NRmax, tol = tol)
 }

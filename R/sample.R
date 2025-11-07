@@ -11,7 +11,7 @@ NULL
 #' @param magic_max Maximum value for the magic number range. Default is \code{1598050000L}
 #' @param x_min Minimum value for the input range. Default is \code{0.25}
 #' @param x_max Maximum value for the input range. Default is \code{1.0}
-#' @param ... Additional arguments passed to \code{frsr}.
+#' @param ... Additional arguments passed to \code{frsr_compute}.
 #'
 #' @details 
 #' 
@@ -28,7 +28,7 @@ NULL
 #'
 #' @return
 #' A data frame with \code{n} rows. When \code{keep_params = FALSE} (the default), the
-#' columns match \code{frsr(..., detail = TRUE)}:
+#' columns match \code{frsr_compute(..., detail = TRUE)}:
 #'     \item{input}{Sampled input values}
 #'     \item{initial}{Initial approximation from integer operations}
 #'     \item{after_one}{Result after one Newton-Raphson iteration}
@@ -45,9 +45,9 @@ NULL
 #'     \item{B}{Newton-Raphson parameter B}
 #'     \item{tol}{Specified tolerance}
 #' 
-#' @seealso 
-#' 
-#' \code{\link{frsr}}
+#' @seealso
+#'
+#' \code{\link{frsr_compute}}
 #'
 #' @references
 #'
@@ -96,6 +96,6 @@ frsr_sample <- function(n,
           PACKAGE = 'frsrr',
           n, log2(x_min), log2(x_max))
     }
-    # Call frsr with generated inputs and parameters
-    frsr(x = inputs, magic = magic_numbers, detail = TRUE, ...)
+    # Call frsr_compute with generated inputs and parameters
+    frsr_compute(x = inputs, magic = magic_numbers, detail = TRUE, ...)
 }

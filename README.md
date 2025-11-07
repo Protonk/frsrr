@@ -14,7 +14,7 @@ I like R! R doesn't have a type for 32 bit floats, so I wanted a way to mess wit
 - C++ parallel implementation for speed so you can get the wrong answer faster
 - Fast sampler to ease sampling over parameter ranges
 - Optional detailed output including initial approximation, intermediate steps, and error metrics
-- Ability to run the frsr with a custom iteration formula, specified in R formula syntax
+- Ability to run the frsr_compute routine with a custom iteration formula, specified in R formula syntax
 - Bin input range and compute optimal magic constants for each bin, if efficiency really isn't your thing.
 
 ## Installation
@@ -32,13 +32,13 @@ devtools::install_github("Protonk/frsrr")
 library(frsrr)
 
 # Custom parameters
-result <- frsr(c(1, 4, 9, 16), magic = 0x5f375a86, NRmax = 2, A = 1.6, B = 0.6)
+result <- frsr_compute(c(1, 4, 9, 16), magic = 0x5f375a86, NRmax = 2, A = 1.6, B = 0.6)
 ## result is a vector of length 4
 print(result)
 # [1] 0.9990148 0.4995074 0.3337626 0.2497537
 
 # Optional detail 
-result.df <- frsr(c(pi, 2^-31, 0.4, 6.02e23), detail = TRUE)
+result.df <- frsr_compute(c(pi, 2^-31, 0.4, 6.02e23), detail = TRUE)
 ## result.df is a dataframe with 4 rows and 7 columns
 print(result)
 #          input      initial    after_one        final        error          diff iters
@@ -61,7 +61,7 @@ kable(samples, format = "simple")
 #  0.9425029   0.9680235    1.024561   1.024561   0.0053300    0.0565371       1   1597011026       1   1.5   0.5     0
 
 ## Find optimal constant for 4 bins betweeon 0.25 and 1.0
-bins <-  frsr_bin(n_bins = 4)
+bins <-  frsr_search_binned(n_bins = 4)
 kable(bins, format = "simple")
 #  Location   Range_Min   Range_Max        Magic   Avg_Relative_Error   Max_Relative_Error    N
 # ---------  ----------  ----------  -----------  -------------------  -------------------  ---

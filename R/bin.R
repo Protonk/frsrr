@@ -3,7 +3,7 @@
 #' @importFrom RcppParallel RcppParallelLibs
 NULL
 
-#' FRSR Bin
+#' FRSR Binned Search
 #'
 #' Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins
 #' by minimizing the maximum relative error. 
@@ -41,7 +41,7 @@ NULL
 #' @examples
 #' \donttest{
 #' # Generate optimal magic constants for the range [0.25, 1.0] divided into 4 bins
-#' result <- frsr_bin()
+#' result <- frsr_search_binned()
 #' print(result)
 #' #   Location Range_Min Range_Max      Magic    Sum_Error N_bins
 #' # 1        1 0.2500000 0.3535534 1597413411 4.549199e-04      4
@@ -49,16 +49,16 @@ NULL
 #' # 3        3 0.5000000 0.7071068 1597150657 3.486200e-05      4
 #' # 4        4 0.7071068 1.0000000 1597488127 8.389181e-04      4
 #' # }
-#' @name frsr_bin
+#' @name frsr_search_binned
 NULL
 
-#' @rdname frsr_bin
+#' @rdname frsr_search_binned
 #' @export
-frsr_bin <- function(x_min = 0.25, x_max = 1.0,
-                     n_bins = 4, NRmax = 0,
-                     float_samples = 1024, magic_samples = 2048,
-                     magic_min = 1596980000L,
-                     magic_max = 1598050000L) {
+frsr_search_binned <- function(x_min = 0.25, x_max = 1.0,
+                               n_bins = 4, NRmax = 0,
+                               float_samples = 1024, magic_samples = 2048,
+                               magic_min = 1596980000L,
+                               magic_max = 1598050000L) {
   if (!is.numeric(x_min) || length(x_min) != 1L || !is.finite(x_min)) {
     stop("`x_min` must be a finite numeric scalar", call. = FALSE)
   }
@@ -156,4 +156,24 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     "Max_Relative_Error",
     "Avg_Relative_Error"
   )]
+}
+
+#' @rdname frsr_search_binned
+#' @export
+frsr_bin <- function(x_min = 0.25, x_max = 1.0,
+                     n_bins = 4, NRmax = 0,
+                     float_samples = 1024, magic_samples = 2048,
+                     magic_min = 1596980000L,
+                     magic_max = 1598050000L) {
+  .Deprecated("frsr_search_binned", package = "frsrr")
+  frsr_search_binned(
+    x_min = x_min,
+    x_max = x_max,
+    n_bins = n_bins,
+    NRmax = NRmax,
+    float_samples = float_samples,
+    magic_samples = magic_samples,
+    magic_min = magic_min,
+    magic_max = magic_max
+  )
 }

@@ -17,7 +17,7 @@ NULL
 #' @param keep_params Logical. If \code{TRUE}, generation parameters are included in detailed output. Default is \code{FALSE}.
 #'
 #' @return
-#' \code{frsr} returns a numeric vector of \code{length(x)}.
+#' \code{frsr_compute} returns a numeric vector of \code{length(x)}.
 #'
 #' If \code{detail = TRUE}, returns a data frame of \code{length(x)} rows with columns:
 #'     \item{input}{The input values}
@@ -76,13 +76,13 @@ NULL
 #' @examples
 #' \donttest{
 #' # Custom Newton-Raphson parameters
-#' result <- frsr(c(1, 4, 9, 16), magic = 0x5f375a86, NRmax = 2, A = 1.6, B = 0.6)
+#' result <- frsr_compute(c(1, 4, 9, 16), magic = 0x5f375a86, NRmax = 2, A = 1.6, B = 0.6)
 #' ## result is a vector of length 4
 #' print(result)
 #' # [1] 0.9990148 0.4995074 0.3337626 0.2497537
 #'
 #' # Optional detail
-#' result.df <- frsr(c(pi, 2^-31, 0.4, 6.02e23), detail = TRUE)
+#' result.df <- frsr_compute(c(pi, 2^-31, 0.4, 6.02e23), detail = TRUE)
 #' ## result.df is a dataframe with 4 rows and 8 columns
 #' print(result.df)
 #' #         input      initial    after_one        final        error         enre          diff iters
@@ -91,14 +91,14 @@ NULL
 #' # 3 4.000000e-01 1.632430e+00 1.578616e+00 1.578616e+00 0.0015955754 0.0015955754 -5.381417e-02     1
 #' # 4 6.020000e+23 1.306493e-12 1.288484e-12 1.288484e-12 0.0002823969 0.0002823969 -1.800925e-14     1
 #' # }
-#' @name frsr
+#' @name frsr_compute
 NULL
 
-#' @rdname frsr
+#' @rdname frsr_compute
 #' @export
-frsr <- function(x, magic = 0x5f3759df, NRmax = 1,
-                 A = 1.5, B = 0.5, tol = 0,
-                 detail = FALSE, keep_params = FALSE) {
+frsr_compute <- function(x, magic = 0x5f3759df, NRmax = 1,
+                         A = 1.5, B = 0.5, tol = 0,
+                         detail = FALSE, keep_params = FALSE) {
   arg_df <- data.frame(x = x, magic = magic,
                        NRmax = NRmax, tol = tol,
                        A = A, B = B)
@@ -109,4 +109,14 @@ frsr <- function(x, magic = 0x5f3759df, NRmax = 1,
   } else {
     return(result$final)
   }
+}
+
+#' @rdname frsr_compute
+#' @export
+frsr <- function(x, magic = 0x5f3759df, NRmax = 1,
+                 A = 1.5, B = 0.5, tol = 0,
+                 detail = FALSE, keep_params = FALSE) {
+  frsr_compute(x = x, magic = magic, NRmax = NRmax,
+               A = A, B = B, tol = tol,
+               detail = detail, keep_params = keep_params)
 }
