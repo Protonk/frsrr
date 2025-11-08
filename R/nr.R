@@ -48,6 +48,8 @@ NULL
 #' @export
 frsr_NR <- function(x, magic = 0x5f3759df, formula, NRmax = 1, tol = 0) {
   y <- frsr(x, magic, NRmax = 0)
+  # Always start from the bit-hack guess so callers can iterate arbitrary R
+  # formulas without needing to reimplement the restoring constant machinery.
   reference <- 1 / sqrt(x)
   iter <- 0
   initial <- y
@@ -78,7 +80,11 @@ frsr_NR <- function(x, magic = 0x5f3759df, formula, NRmax = 1, tol = 0) {
     initial = initial,
     final = y,
     error = error,
+    # tol == 0 means "never early exit", so convergence is only meaningful
+    # when a positive tolerance was requested.
     converged = ifelse(tol > 0 && error < tol, TRUE, FALSE),
+    # Report the per-call improvement so bespoke formulas can track whether
+    # they are actually accelerating relative to the startup error.
     conv_rate = (error_initial - error) / iter,
     iters = iter
   )

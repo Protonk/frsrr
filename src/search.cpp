@@ -51,6 +51,8 @@ NumericVector bounded_stratified_sample(int n, double low, double high, bool wei
 
     const long double lower_bound = static_cast<long double>(std::exp2(low));
     const long double upper_bound = static_cast<long double>(std::exp2(high));
+    // Use long double so the derived significand bounds hold their precision
+    // even when callers pass fractional log2 endpoints.
 
     struct Stratum {
         int exponent;
@@ -119,6 +121,8 @@ NumericVector bounded_stratified_sample(int n, double low, double high, bool wei
     if (!weighted) {
         const std::size_t k = strata.size();
         const std::size_t start = sample_offset(static_cast<uint32_t>(k));
+        // Walking the strata with a rotating start index keeps the marginal
+        // exponent distribution uniform without shuffling the container each time.
         for (int i = 0; i < n; ++i) {
             const Stratum& st = strata[(start + static_cast<std::size_t>(i)) % k];
             uint32_t range = st.count;
@@ -135,6 +139,8 @@ NumericVector bounded_stratified_sample(int n, double low, double high, bool wei
             total += strata[i].count;
             prefix[i] = total;
         }
+        // Weighted sampling approximates the natural float density where wider
+        // exponent ranges contain more representable significands.
 
         for (int i = 0; i < n; ++i) {
             double u = unif_rand();
@@ -248,6 +254,8 @@ struct MagicReducer : public Worker {
             float squared_error = 0.0f;
 
             for (int j = 0; j < floats.length(); ++j) {
+                // floats is an RVector wrapper, so reads here are zero-copy even
+                // though this loop might be running on multiple worker threads.
                 float x = floats[j];
                 float approx = frsr0(x, magic, NRmax);
                 float actual = 1.0f / std::sqrt(x);

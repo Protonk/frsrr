@@ -117,6 +117,8 @@ List phase_orchestrator(int phases,
     } else {
         rng.seed(seed_from_random_device());
     }
+    // Keep sampling deterministic when the caller supplied a seed; otherwise
+    // rely on std::random_device so repeated scans explore different strata.
     std::uniform_real_distribution<double> unit_dist(0.0, 1.0);
 
     const int num_exponents = static_cast<int>(exponent_values.size());
@@ -134,6 +136,9 @@ List phase_orchestrator(int phases,
         stop("Requested grid is too large for available memory");
     }
 
+    // All scratch storage is allocated once to avoid quadratic reallocations
+    // while iterating over the magic grid; each candidate simply overwrites
+    // these buffers in place.
     std::vector<double> phase_abs(total_samples);
     std::vector<double> phase_signed(total_samples);
     std::vector<double> phase_sum(static_cast<std::size_t>(phases));
@@ -173,6 +178,8 @@ List phase_orchestrator(int phases,
                     if (frac >= 1.0) {
                         frac = std::nextafter(1.0, 0.0);
                     }
+                    // Mantissa rebuild keeps the sample inside the desired phase
+                    // slice while std::ldexp reattaches the exponent under test.
                     const double mantissa = std::exp2(frac);
                     const double x_val = std::ldexp(mantissa, exponent);
                     const float xf = static_cast<float>(x_val);

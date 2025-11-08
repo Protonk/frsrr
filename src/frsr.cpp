@@ -84,6 +84,9 @@ struct FRSRWorker : public Worker {
             double canonical_input = mantissa * 2.0;
             int k = exponent - 1;
 
+            // Evaluate the mantissa-only form so we can report exponent-normalized
+            // errors later; this isolates the error the restoring constant causes
+            // independent of the exponent bucket the caller sampled from.
             float canonical_y = frsr0(static_cast<float>(canonical_input), magic[j], 0);
             double canonical_reference = 1.0 / std::sqrt(canonical_input);
             float canonical_rel_error = std::abs(canonical_y - canonical_reference) / canonical_reference;
@@ -135,6 +138,8 @@ struct FRSRWorker : public Worker {
             if (!std::isfinite(scale) || scale == 0.0) {
                 res.enre[j] = NA_REAL;
             } else {
+                // Dividing out the power-of-two contribution lets consumers compare
+                // errors across exponents, mirroring the canonical computation above.
                 double normalized = static_cast<double>(canonical_y) / scale;
                 res.enre[j] = std::abs(normalized - reference) / reference;
             }
@@ -159,6 +164,8 @@ DataFrame frsr(DataFrame input, bool keep_params) {
     FRSRResult res(n);
 
     FRSRWorker worker(x, magic, NRmax, A, B, tol, res);
+    // The parallel loop is embarrassingly parallel and has no cross-element
+    // sharing, so parallelFor can safely stride across inputs without locks.
     parallelFor(0, n, worker);
 
     if (keep_params) {
@@ -190,7 +197,6 @@ DataFrame frsr(DataFrame input, bool keep_params) {
         );
     }
 }
-
 
 
 

@@ -82,6 +82,9 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
   NRmax <- as.integer(NRmax)[1]
   weighted <- isTRUE(weighted)
 
+  # Argument coercions above intentionally drop vector inputs to a single scalar;
+  # the downstream C++ helpers only read the first element, so we keep behavior
+  # predictable by trimming here instead of letting implicit recycling occur.
   if (is.na(n_bins) || n_bins < 1L) {
     return(data.frame(
       N_bins = integer(0),
@@ -105,6 +108,8 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     floats <- .Call('_frsrr_bounded_stratified_sample',
                     PACKAGE = 'frsrr',
                     float_samples, log2(bin_min), log2(bin_max), weighted)
+    # Magic constants are explored via simple sampling; drawing with replacement
+    # keeps the runtime flat even when the range is narrower than magic_samples.
     magics <- sample(magic_min:magic_max,
                      size = magic_samples,
                      replace = TRUE)
@@ -112,7 +117,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     result <- .Call('_frsrr_search_optimal_constant',
                     PACKAGE = 'frsrr',
                     floats, magics, NRmax, objective, dependent)
-    
+
     # Return results as a data frame
     output <- data.frame(
       Location = i,
@@ -121,9 +126,11 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     )
     cbind(output, result)
   })
-  
+
   # Combine results from all bins into a single data frame
   result <- do.call(rbind, bins)
+  # Each row inherits the global bin count here so callers can reshape or merge
+  # without having to carry around the per-call metadata separately.
   result$N_bins <- rep.int(n_bins, nrow(result))
   result[c(
     "N_bins",

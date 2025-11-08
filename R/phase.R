@@ -59,6 +59,8 @@ frsr_phase <- function(phases = 128L,
   NRmax <- as.integer(NRmax)[1]
   seed_arg <- if (is.null(seed)) NULL else as.numeric(seed)[1]
 
+  # Keep conversion/validation in R so the hot C++ path can assume scalars,
+  # which avoids repeatedly checking lengths inside the tight sampling loops.
   .Call(
     '_frsrr_phase_orchestrator',
     PACKAGE = 'frsrr',
@@ -88,6 +90,8 @@ default_magic_grid <- function(lower = 1596980000L,
   if (is.na(stride) || stride == 0L) {
     stride <- 1L
   }
+  # Accept either ascending or descending bounds; the absolute stride lets the
+  # caller flip the sweep direction without having to special-case seq().
   if (lower <= upper) {
     seq.int(lower, upper, by = stride)
   } else {
@@ -115,6 +119,8 @@ frsr_phase_heatmap <- function(heat,
   x <- seq_len(ncol(heat))
   row_names <- rownames(heat)
   y <- seq_len(nrow(heat))
+  # Preserve any exponent labels from frsr_phase() so the plot axes stay tied
+  # to physical exponent bins instead of anonymous row indices.
   if (!is.null(row_names)) {
     suppressWarnings({
       y_numeric <- as.numeric(row_names)

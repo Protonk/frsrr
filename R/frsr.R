@@ -102,11 +102,19 @@ frsr <- function(x, magic = 0x5f3759df, NRmax = 1,
   arg_df <- data.frame(x = x, magic = magic,
                        NRmax = NRmax, tol = tol,
                        A = A, B = B)
+  # Consolidate user inputs into a rectangular data frame so the C++ path can
+  # run one parallel sweep; recycling happens here in R where the rules are
+  # explicit instead of inside the worker threads.
   .Call('_frsrr_frsr', PACKAGE = 'frsrr',
           arg_df, keep_params) -> result
   if (detail) {
+    # Returning the full data frame preserves intermediate diagnostics that are
+    # expensive to recompute (e.g., per-iteration errors) and mirrors the
+    # documented detail schema.
     return(result)
   } else {
+    # The fast path only surfaces the final approximation vector so this
+    # function can drop in as a near-drop-in replacement for 1 / sqrt(x).
     return(result$final)
   }
 }

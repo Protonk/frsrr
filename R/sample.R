@@ -87,6 +87,8 @@ frsr_sample <- function(n,
     } else if (is.null(magic_max)) {
         rep(magic_min, n)  # Use magic_min if magic_max is NULL
     } else {
+        # Sample with replacement so we explore the full range even when n
+        # exceeds the integer interval size.
         sample(magic_min:magic_max, n, replace = TRUE)
     }
     # Determine inputs based on whether x_min or x_max is NULL
@@ -102,5 +104,7 @@ frsr_sample <- function(n,
               n, log2(x_min), log2(x_max), weighted)
     }
     # Call frsr with generated inputs and parameters
+    # detail = TRUE keeps the diagnostics that users typically want when
+    # inspecting sample quality, while ... lets callers override Newton params.
     frsr(x = inputs, magic = magic_numbers, detail = TRUE, ...)
 }
