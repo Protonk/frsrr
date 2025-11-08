@@ -6,6 +6,8 @@
 #include <cmath>
 #include <limits>
 #include <stdexcept>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "frsr.h"
@@ -157,36 +159,93 @@ NumericVector bounded_stratified_sample(int n, double low, double high, bool wei
     return result;
 }
 
+namespace {
+
+constexpr const char* kMetricMaxRelativeError = "max_relative_error";
+constexpr const char* kMetricAvgRelativeError = "avg_relative_error";
+constexpr const char* kMetricRmseRelativeError = "rmse_relative_error";
+
+struct MetricResult {
+    float max_relative_error;
+    float avg_relative_error;
+    float rmse_relative_error;
+};
+
+inline std::string metric_options() {
+    return std::string(kMetricMaxRelativeError) + ", " + kMetricAvgRelativeError + ", " +
+           kMetricRmseRelativeError;
+}
+
+inline void validate_metric_name(const std::string& metric_name, const char* parameter_label) {
+    if (metric_name == kMetricMaxRelativeError ||
+        metric_name == kMetricAvgRelativeError ||
+        metric_name == kMetricRmseRelativeError) {
+        return;
+    }
+    std::string message = "`";
+    message += parameter_label;
+    message += "` must be one of: ";
+    message += metric_options();
+    throw std::invalid_argument(message);
+}
+
+inline float metric_value(const MetricResult& metrics, const std::string& metric_name) {
+    if (metric_name == kMetricMaxRelativeError) {
+        return metrics.max_relative_error;
+    }
+    if (metric_name == kMetricAvgRelativeError) {
+        return metrics.avg_relative_error;
+    }
+    if (metric_name == kMetricRmseRelativeError) {
+        return metrics.rmse_relative_error;
+    }
+    // Should never reach here because validate_metric_name should guard inputs.
+    throw std::logic_error("Unexpected metric requested");
+}
+
+}
+
 struct MagicReducer : public Worker {
     const RVector<double> floats;
     const RVector<int> magics;
     const int NRmax;
+    const std::string objective_metric;
+    const std::string dependent_metric;
 
     uint32_t best_magic;
-    float min_max_error;
-    float best_avg_error;
+    float best_objective_value;
+    float best_dependent_value;
 
-    MagicReducer(const NumericVector floats, const IntegerVector magics, int NRmax)
+    MagicReducer(const NumericVector floats,
+                 const IntegerVector magics,
+                 int NRmax,
+                 std::string objective_metric,
+                 std::string dependent_metric)
         : floats(floats),
           magics(magics),
           NRmax(NRmax),
+          objective_metric(std::move(objective_metric)),
+          dependent_metric(std::move(dependent_metric)),
           best_magic(static_cast<uint32_t>(magics[0])),
-          min_max_error(std::numeric_limits<float>::max()),
-          best_avg_error(0.0f) {}
+          best_objective_value(std::numeric_limits<float>::max()),
+          best_dependent_value(0.0f) {}
 
     MagicReducer(const MagicReducer& reducer, Split)
         : floats(reducer.floats),
           magics(reducer.magics),
           NRmax(reducer.NRmax),
+          objective_metric(reducer.objective_metric),
+          dependent_metric(reducer.dependent_metric),
           best_magic(static_cast<uint32_t>(reducer.magics[0])),
-          min_max_error(std::numeric_limits<float>::max()),
-          best_avg_error(0.0f) {}
+          best_objective_value(std::numeric_limits<float>::max()),
+          best_dependent_value(0.0f) {}
 
     void operator()(std::size_t begin, std::size_t end) {
         for (std::size_t i = begin; i < end; ++i) {
             uint32_t magic = static_cast<uint32_t>(magics[i]);
             float total_error = 0.0f;
             float max_error = 0.0f;
+            float squared_error = 0.0f;
 
             for (int j = 0; j < floats.length(); ++j) {
                 float x = floats[j];
@@ -194,42 +253,54 @@ struct MagicReducer : public Worker {
                 float actual = 1.0f / std::sqrt(x);
                 float rel_error = std::abs((approx - actual) / actual);
                 total_error += rel_error;
+                squared_error += rel_error * rel_error;
                 if (rel_error > max_error) {
                     max_error = rel_error;
                 }
             }
 
-            float avg_error = total_error / floats.length();
-
-            if (max_error < min_max_error) {
-                min_max_error = max_error;
+            MetricResult metrics{
+                max_error,
+                total_error / floats.length(),
+                std::sqrt(squared_error / floats.length())
+            };
+            float objective_value = metric_value(metrics, objective_metric);
+            if (objective_value < best_objective_value) {
+                best_objective_value = objective_value;
+                best_dependent_value = metric_value(metrics, dependent_metric);
                 best_magic = magic;
-                best_avg_error = avg_error;
             }
         }
     }
 
     void join(const MagicReducer& rhs) {
-        if (rhs.min_max_error < min_max_error) {
-            min_max_error = rhs.min_max_error;
+        if (rhs.best_objective_value < best_objective_value) {
+            best_objective_value = rhs.best_objective_value;
             best_magic = rhs.best_magic;
-            best_avg_error = rhs.best_avg_error;
+            best_dependent_value = rhs.best_dependent_value;
         }
     }
 };
 
 // [[Rcpp::export]]
-DataFrame search_optimal_constant(NumericVector floats, IntegerVector magics, int NRmax) {
+DataFrame search_optimal_constant(NumericVector floats,
+                                  IntegerVector magics,
+                                  int NRmax,
+                                  std::string objective_metric,
+                                  std::string dependent_metric) {
     if (magics.length() == 0) {
         stop("`magics` must contain at least one candidate");
     }
 
-    MagicReducer reducer(floats, magics, NRmax);
+    validate_metric_name(objective_metric, "objective");
+    validate_metric_name(dependent_metric, "dependent");
+
+    MagicReducer reducer(floats, magics, NRmax, objective_metric, dependent_metric);
     parallelReduce(0, magics.length(), reducer);
 
     return DataFrame::create(
         Named("Magic") = reducer.best_magic,
-        Named("Objective") = reducer.best_avg_error,
-        Named("Dependent") = reducer.min_max_error
+        Named("Dependent") = reducer.best_dependent_value,
+        Named("Objective") = reducer.best_objective_value
     );
 }

@@ -90,10 +90,7 @@ frsr_sample <- function(n,
         sample(magic_min:magic_max, n, replace = TRUE)
     }
     # Determine inputs based on whether x_min or x_max is NULL
-    if (!is.logical(weighted) || length(weighted) != 1L || is.na(weighted)) {
-        stop("`weighted` must be a non-missing logical scalar", call. = FALSE)
-    }
-
+    weighted <- isTRUE(weighted)
     inputs <- if (is.null(x_min)) {
         rep(x_max, n)  # Use x_max if x_min is NULL
     } else if (is.null(x_max)) {

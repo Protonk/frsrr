@@ -22,6 +22,18 @@ test_that("frsr_bin supports weighted sampling", {
   expect_true(all(is.finite(unlist(result))))
 })
 
+test_that("frsr_bin allows metric overrides", {
+  result <- frsr_bin(
+    float_samples = 8,
+    magic_samples = 8,
+    objective = "rmse_relative_error",
+    dependent = "avg_relative_error"
+  )
+  expect_s3_class(result, "data.frame")
+  expect_true(all(is.finite(result$Objective)))
+  expect_true(all(is.finite(result$Dependent)))
+})
+
 test_that("frsr_bin handles different number of bins", {
   result <- frsr_bin(n_bins = 2, float_samples = 10, magic_samples = 10)
   expect_equal(nrow(result), 2)
@@ -29,18 +41,25 @@ test_that("frsr_bin handles different number of bins", {
   expect_equal(nrow(result), 8)
 })
 
-test_that("frsr_bin validates parameters", {
-  expect_error(
-    frsr_bin(n_bins = 0),
-    "`n_bins` must be at least 1",
-    fixed = TRUE
-  )
+test_that("frsr_bin only validates arguments needed for C++ bridge", {
+  empty <- frsr_bin(n_bins = 0)
+  expect_equal(nrow(empty), 0)
 
   expect_error(
-    frsr_bin(magic_min = 1596980100L, magic_max = 1596980000L),
-    "`magic_min` must be less than or equal to `magic_max`",
+    frsr_bin(objective = "bogus"),
+    "'arg' should be one of",
     fixed = TRUE
   )
+})
+
+test_that("frsr_bin allows reversed magic bounds", {
+  result <- frsr_bin(
+    float_samples = 8,
+    magic_samples = 8,
+    magic_min = 1596980100L,
+    magic_max = 1596980000L
+  )
+  expect_s3_class(result, "data.frame")
 })
 
 test_that("frsr_bin returns expected bin metadata and magic bounds", {
