@@ -47,6 +47,9 @@ NULL
 #' @rdname frsr_NR
 #' @export
 frsr_NR <- function(x, magic = 0x5f3759df, formula, NRmax = 1, tol = 0) {
+  if (NRmax == 0) {
+    stop("NRmax must be at least 1; iterations required for custom evaluation", call. = FALSE)
+  }
   y <- frsr(x, magic, NRmax = 0)
   # Always start from the bit-hack guess so callers can iterate arbitrary R
   # formulas without needing to reimplement the restoring constant machinery.

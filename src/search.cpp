@@ -122,6 +122,12 @@ struct MetricResult {
     float rmse_relative_error;
 };
 
+struct ErrorAccumulator {
+    float total_error = 0.0f;
+    float squared_error = 0.0f;
+    float max_error = 0.0f;
+};
+
 inline std::string MetricOptions() {
     return std::string(kMetricMaxRelativeError) + ", " + kMetricAvgRelativeError + ", " +
            kMetricRmseRelativeError;
@@ -223,83 +229,62 @@ NumericVector bounded_stratified_sample(int n, double low, double high, bool wei
 // MagicReducer
 // -----------------------------------------------------------------------------
 
-// Each worker thread walks a slice of the magic constants and remembers the best one it saw.
+// Each worker thread aggregates error statistics for every candidate over a slice of the samples.
 struct MagicReducer : public Worker {
-    const RVector<double> floats;
-    const RVector<int> magics;
+    const float* samples;
+    const float* rsqrt_values;
+    const uint32_t* magics;
+    const std::size_t magic_count;
     const int NRmax;
-    const std::string objective_metric;
-    const std::string dependent_metric;
 
-    uint32_t best_magic;
-    float best_objective_value;
-    float best_dependent_value;
+    std::vector<detail::ErrorAccumulator> accumulators;
 
-    MagicReducer(const NumericVector floats,
-                 const IntegerVector magics,
-                 int NRmax,
-                 std::string objective_metric,
-                 std::string dependent_metric)
-        : floats(floats),
+    MagicReducer(const float* samples,
+                 const float* rsqrt_values,
+                 const uint32_t* magics,
+                 std::size_t magic_count,
+                 int NRmax)
+        : samples(samples),
+          rsqrt_values(rsqrt_values),
           magics(magics),
+          magic_count(magic_count),
           NRmax(NRmax),
-          objective_metric(std::move(objective_metric)),
-          dependent_metric(std::move(dependent_metric)),
-          best_magic(static_cast<uint32_t>(magics[0])),
-          best_objective_value(std::numeric_limits<float>::max()),
-          best_dependent_value(0.0f) {}
+          accumulators(magic_count) {}
 
     MagicReducer(const MagicReducer& reducer, Split)
-        : floats(reducer.floats),
+        : samples(reducer.samples),
+          rsqrt_values(reducer.rsqrt_values),
           magics(reducer.magics),
+          magic_count(reducer.magic_count),
           NRmax(reducer.NRmax),
-          objective_metric(reducer.objective_metric),
-          dependent_metric(reducer.dependent_metric),
-          best_magic(static_cast<uint32_t>(reducer.magics[0])),
-          best_objective_value(std::numeric_limits<float>::max()),
-          best_dependent_value(0.0f) {}
+          accumulators(magic_count) {}
 
     void operator()(std::size_t begin, std::size_t end) {
-        const int sample_count = floats.length();
-        for (std::size_t i = begin; i < end; ++i) {
-            uint32_t magic = static_cast<uint32_t>(magics[i]);
-            float total_error = 0.0f;
-            float max_error = 0.0f;
-            float squared_error = 0.0f;
+        for (std::size_t sample_idx = begin; sample_idx < end; ++sample_idx) {
+            const float sample = samples[sample_idx];
+            const float actual = rsqrt_values[sample_idx];
 
-            for (int j = 0; j < sample_count; ++j) {
-                // Each float probes how closely the candidate "magic" approximates 1/sqrt(x).
-                float x = floats[j];
-                float approx = frsr0(x, magic, NRmax);
-                float actual = 1.0f / std::sqrt(x);
-                float rel_error = std::abs((approx - actual) / actual);
-                total_error += rel_error;
-                squared_error += rel_error * rel_error;
-                if (rel_error > max_error) {
-                    max_error = rel_error;
+            for (std::size_t magic_idx = 0; magic_idx < magic_count; ++magic_idx) {
+                const uint32_t magic = magics[magic_idx];
+                const float approx = frsr0(sample, magic, NRmax);
+                const float rel_error = std::abs((approx - actual) / actual);
+                auto& acc = accumulators[magic_idx];
+                acc.total_error += rel_error;
+                acc.squared_error += rel_error * rel_error;
+                if (rel_error > acc.max_error) {
+                    acc.max_error = rel_error;
                 }
-            }
-
-            // Summaries capture the max/mean/RMSE relative error for this magic.
-            detail::MetricResult metrics{
-                max_error,
-                total_error / sample_count,
-                std::sqrt(squared_error / sample_count)
-            };
-            float objective_value = detail::MetricValue(metrics, objective_metric);
-            if (objective_value < best_objective_value) {
-                best_objective_value = objective_value;
-                best_dependent_value = detail::MetricValue(metrics, dependent_metric);
-                best_magic = magic;
             }
         }
     }
 
     void join(const MagicReducer& rhs) {
-        if (rhs.best_objective_value < best_objective_value) {
-            best_objective_value = rhs.best_objective_value;
-            best_magic = rhs.best_magic;
-            best_dependent_value = rhs.best_dependent_value;
+        for (std::size_t magic_idx = 0; magic_idx < magic_count; ++magic_idx) {
+            accumulators[magic_idx].total_error += rhs.accumulators[magic_idx].total_error;
+            accumulators[magic_idx].squared_error += rhs.accumulators[magic_idx].squared_error;
+            if (rhs.accumulators[magic_idx].max_error > accumulators[magic_idx].max_error) {
+                accumulators[magic_idx].max_error = rhs.accumulators[magic_idx].max_error;
+            }
         }
     }
 };
@@ -313,17 +298,59 @@ DataFrame search_optimal_constant(NumericVector floats,
     if (magics.length() == 0) {
         stop("`magics` must contain at least one candidate");
     }
+    if (floats.length() == 0) {
+        stop("`floats` must contain at least one value");
+    }
 
     detail::ValidateMetricName(objective_metric, "objective");
     detail::ValidateMetricName(dependent_metric, "dependent");
 
-    MagicReducer reducer(floats, magics, NRmax, objective_metric, dependent_metric);
-    // parallelReduce shards the workload across threads and stitches the best answer together.
-    parallelReduce(0, magics.length(), reducer);
+    const std::size_t sample_count = static_cast<std::size_t>(floats.length());
+    std::vector<float> sample_values(sample_count);
+    std::vector<float> rsqrt_values(sample_count);
+    for (std::size_t i = 0; i < sample_count; ++i) {
+        const float value = static_cast<float>(floats[static_cast<R_xlen_t>(i)]);
+        sample_values[i] = value;
+        rsqrt_values[i] = 1.0f / std::sqrt(value);
+    }
+
+    const std::size_t magic_count = static_cast<std::size_t>(magics.length());
+    std::vector<uint32_t> magic_values(magic_count);
+    for (std::size_t i = 0; i < magic_count; ++i) {
+        magic_values[i] = static_cast<uint32_t>(magics[static_cast<R_xlen_t>(i)]);
+    }
+
+    MagicReducer reducer(sample_values.data(),
+                         rsqrt_values.data(),
+                         magic_values.data(),
+                         magic_count,
+                         NRmax);
+    // parallelReduce shards the float workload so even a small candidate set can saturate threads.
+    parallelReduce(static_cast<std::size_t>(0), sample_count, reducer);
+
+    uint32_t best_magic = magic_values[0];
+    float best_objective_value = std::numeric_limits<float>::max();
+    float best_dependent_value = 0.0f;
+    const float inv_sample_count = 1.0f / static_cast<float>(sample_count);
+
+    for (std::size_t i = 0; i < magic_count; ++i) {
+        const detail::ErrorAccumulator& acc = reducer.accumulators[i];
+        const detail::MetricResult metrics{
+            acc.max_error,
+            acc.total_error * inv_sample_count,
+            std::sqrt(acc.squared_error * inv_sample_count)
+        };
+        const float objective_value = detail::MetricValue(metrics, objective_metric);
+        if (objective_value < best_objective_value) {
+            best_objective_value = objective_value;
+            best_dependent_value = detail::MetricValue(metrics, dependent_metric);
+            best_magic = magic_values[i];
+        }
+    }
 
     return DataFrame::create(
-        Named("Magic") = reducer.best_magic,
-        Named("Dependent") = reducer.best_dependent_value,
-        Named("Objective") = reducer.best_objective_value
+        Named("Magic") = best_magic,
+        Named("Dependent") = best_dependent_value,
+        Named("Objective") = best_objective_value
     );
 }

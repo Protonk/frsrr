@@ -44,4 +44,12 @@ describe("frsr_NR", {
           c("input", "initial", "final", "error", "converged", "conv_rate", "iters")
         )
     })
+
+    it("errors when NRmax is zero", {
+        formula <- quote(y * (1.5 - 0.5 * x * y^2))
+        expect_error(
+          frsr_NR(1, formula = formula, NRmax = 0),
+          "iterations required for custom evaluation"
+        )
+    })
 })
