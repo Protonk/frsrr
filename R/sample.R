@@ -9,8 +9,8 @@ NULL
 #' @param n Number of samples to generate.
 #' @param magic_min Minimum value for the magic number range. Default is \code{1596980000L}
 #' @param magic_max Maximum value for the magic number range. Default is \code{1598050000L}
-#' @param x_min Minimum value for the input range. Default is \code{0.25}
-#' @param x_max Maximum value for the input range. Default is \code{1.0}
+#' @param x_min Minimum value for the input range (must be > 0). Default is \code{0.25}
+#' @param x_max Maximum value for the input range (must exceed \code{x_min}). Default is \code{1.0}
 #' @param weighted Logical; if \code{TRUE}, weight the sampler by the number of
 #'   admissible significands in each exponent stratum. Default is \code{FALSE}.
 #' @param ... Additional arguments passed to \code{frsr}.
@@ -81,6 +81,26 @@ frsr_sample <- function(n,
                         x_min = 0.25, x_max = 1.0,
                         weighted = FALSE,
                         ...) {
+    normalize_bound <- function(value, label) {
+        if (is.null(value)) {
+            return(NULL)
+        }
+        scalar <- as.numeric(value)[1]
+        if (!is.finite(scalar)) {
+            stop("`", label, "` must be finite when provided")
+        }
+        if (scalar <= 0) {
+            stop("`", label, "` must be greater than 0")
+        }
+        scalar
+    }
+
+    x_min <- normalize_bound(x_min, "x_min")
+    x_max <- normalize_bound(x_max, "x_max")
+    if (!is.null(x_min) && !is.null(x_max) && x_min >= x_max) {
+        stop("`x_min` must be less than `x_max` when both are supplied")
+    }
+
     # Determine magic numbers based on whether magic_min or magic_max is NULL
     magic_numbers <- if (is.null(magic_min)) {
         rep(magic_max, n)  # Use magic_max if magic_min is NULL

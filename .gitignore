@@ -9,3 +9,4 @@ src/RcppExports.cpp
 .vscode/settings.json
 src/*.so
 src/*.o
+tests/testthat/Rplots.pdf

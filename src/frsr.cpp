@@ -22,7 +22,7 @@ struct FRSRResult {
 
 // The fast reciprocal square root documented without
 // a certain word. An expurgated version.
-float frsr0(float x, uint32_t magic, int NRmax) {
+float frsr0(float x, std::uint32_t magic, int NRmax) {
     // A union here allows us to represent the same memory bits
     // as both a float and an unsigned integer, giving us access
     // to the "evil floating point bit level hacking" of 
@@ -36,7 +36,7 @@ float frsr0(float x, uint32_t magic, int NRmax) {
     //  this is our "poor man's" logarithm.
     union {
         float f;
-        uint32_t u;
+        std::uint32_t u;
     } y = {static_cast<float>(x)};
     // R numeric vectors hand us doubles; narrowing to float here ensures the
     // bit reinterpretation below sees the 32-bit layout the algorithm expects
@@ -197,7 +197,6 @@ DataFrame frsr(DataFrame input, bool keep_params) {
         );
     }
 }
-
 
 
 
