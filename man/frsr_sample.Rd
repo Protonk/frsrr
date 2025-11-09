@@ -10,6 +10,7 @@ frsr_sample(
   magic_max = 1598050000L,
   x_min = 0.25,
   x_max = 1,
+  weighted = FALSE,
   ...
 )
 }
@@ -24,10 +25,29 @@ frsr_sample(
 
 \item{x_max}{Maximum value for the input range. Default is \code{1.0}}
 
+\item{weighted}{Logical; if \code{TRUE}, weight the sampler by the number of
+admissible significands in each exponent stratum. Default is \code{FALSE}.}
+
 \item{...}{Additional arguments passed to \code{frsr}.}
 }
 \value{
-A data frame with sampled values and optional details from \code{frsr}.
+A data frame with \code{n} rows. When \code{keep_params = FALSE} (the default), the
+columns match \code{frsr(..., detail = TRUE)}:
+    \item{input}{Sampled input values}
+    \item{initial}{Initial approximation from integer operations}
+    \item{after_one}{Result after one Newton-Raphson iteration}
+    \item{final}{Result from the last iteration}
+    \item{error}{Absolute relative error of the final result}
+    \item{enre}{Exponent-normalized absolute relative error}
+    \item{diff}{Difference between the final and penultimate approximations}
+    \item{iters}{Number of iterations performed}
+
+If \code{keep_params = TRUE}, the data frame will also include columns:
+    \item{magic}{Magic constant(s) used for each sample}
+    \item{NRmax}{Maximum number of Newton-Raphson iterations}
+    \item{A}{Newton-Raphson parameter A}
+    \item{B}{Newton-Raphson parameter B}
+    \item{tol}{Specified tolerance}
 }
 \description{
 Generate samples for the Fast Reciprocal Square Root (FRSR) algorithm.
@@ -50,11 +70,11 @@ from 0.25 to 1.0.
 # Generate 4 samples using default parameters
 samples <- frsr_sample(4)
 print(samples)
-#       input  initial after_one    final        error         diff iters
-# 1 0.8100569 1.154508  1.108492 1.108492 0.0023223383 -0.046015978     1
-# 2 0.4073950 1.573407  1.566680 1.566680 0.0000273157 -0.006727338     1
-# 3 0.6304980 1.359966  1.247014 1.247014 0.0098225391 -0.112952113     1
-# 4 0.4316622 1.607666  1.514687 1.514687 0.0048355814 -0.092979550     1
+#       input  initial after_one    final        error         enre         diff iters
+# 1 0.8100569 1.154508  1.108492 1.108492 0.0023223383 0.0023223383 -0.046015978     1
+# 2 0.4073950 1.573407  1.566680 1.566680 0.0000273157 0.0000273157 -0.006727338     1
+# 3 0.6304980 1.359966  1.247014 1.247014 0.0098225391 0.0098225391 -0.112952113     1
+# 4 0.4316622 1.607666  1.514687 1.514687 0.0048355814 0.0048355814 -0.092979550     1
 #}
 
 }

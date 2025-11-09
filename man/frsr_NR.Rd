@@ -25,6 +25,7 @@ A data frame of \code{length(x)} rows with columns:
    \item{error}{Absolute relative error of final versus standard library}
    \item{converged}{Whether the algorithm converged}
    \item{conv_rate}{Mean rate of convergence}
+   \item{iters}{Number of iterations performed}
 }
 \description{
 Set custom Newton-Raphson formula for the Fast Reciprocal Square Root.

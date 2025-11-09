@@ -12,9 +12,11 @@
 
 using namespace Rcpp;
 
-namespace {
+namespace phase_detail {
 
-inline double quantile_from_sorted(const double* sorted, std::size_t count, double q) {
+// ---- Statistics helpers -----------------------------------------------------
+// These operate on pre-sorted windows so we can keep allocation costs flat.
+inline double QuantileFromSorted(const double* sorted, std::size_t count, double q) {
     if (count == 0) {
         return NA_REAL;
     }
@@ -34,7 +36,7 @@ inline double quantile_from_sorted(const double* sorted, std::size_t count, doub
     return value;
 }
 
-inline double median_sorted(double* sorted, std::size_t count) {
+inline double MedianSorted(double* sorted, std::size_t count) {
     if (count == 0) {
         return NA_REAL;
     }
@@ -46,7 +48,34 @@ inline double median_sorted(double* sorted, std::size_t count) {
     return 0.5 * (mid + mid_next);
 }
 
-inline std::mt19937_64::result_type seed_from_random_device() {
+// ---- Input validation helpers ----------------------------------------------
+inline std::vector<int> ValidateExponents(const IntegerVector& exponents) {
+    std::vector<int> values(exponents.size());
+    for (int i = 0; i < exponents.size(); ++i) {
+        if (exponents[i] == NA_INTEGER) {
+            stop("`exponents` cannot contain NA");
+        }
+        if (exponents[i] < -126 || exponents[i] > 127) {
+            stop("`exponents` must be within [-126, 127] to avoid subnormals/infinities");
+        }
+        values[i] = exponents[i];
+    }
+    return values;
+}
+
+inline std::vector<int> ValidateMagics(const IntegerVector& magics) {
+    std::vector<int> values(magics.size());
+    for (int i = 0; i < magics.size(); ++i) {
+        if (magics[i] == NA_INTEGER) {
+            stop("`magics` cannot contain NA");
+        }
+        values[i] = magics[i];
+    }
+    return values;
+}
+
+// ---- RNG helpers ------------------------------------------------------------
+inline std::mt19937_64::result_type SeedFromRandomDevice() {
     std::random_device rd;
     // Two draws to give the 64-bit engine a wider seed surface.
     uint64_t high = static_cast<uint64_t>(rd()) << 32;
@@ -54,7 +83,26 @@ inline std::mt19937_64::result_type seed_from_random_device() {
     return high ^ low;
 }
 
-}  // namespace
+inline std::mt19937_64 InitializeRng(const Nullable<NumericVector>& seed_nullable) {
+    std::mt19937_64 rng;
+    if (seed_nullable.isNotNull()) {
+        NumericVector seed_vec(seed_nullable);
+        if (seed_vec.size() != 1) {
+            stop("`seed` must be NULL or a length-1 numeric value");
+        }
+        double seed_value = seed_vec[0];
+        if (!std::isfinite(seed_value)) {
+            stop("`seed` must be finite when provided");
+        }
+        int64_t rounded = static_cast<int64_t>(std::llround(seed_value));
+        rng.seed(static_cast<std::mt19937_64::result_type>(rounded));
+        return rng;
+    }
+    rng.seed(SeedFromRandomDevice());
+    return rng;
+}
+
+}  // namespace phase_detail
 
 // [[Rcpp::export]]
 List phase_orchestrator(int phases,
@@ -83,42 +131,12 @@ List phase_orchestrator(int phases,
         stop("`NRmax` must be non-negative");
     }
 
-    std::vector<int> exponent_values(exponents.size());
-    for (int i = 0; i < exponents.size(); ++i) {
-        if (exponents[i] == NA_INTEGER) {
-            stop("`exponents` cannot contain NA");
-        }
-        if (exponents[i] < -126 || exponents[i] > 127) {
-            stop("`exponents` must be within [-126, 127] to avoid subnormals/infinities");
-        }
-        exponent_values[i] = exponents[i];
-    }
+    // Copy R inputs into STL containers once so inner loops can stay pointer-friendly.
+    std::vector<int> exponent_values = phase_detail::ValidateExponents(exponents);
+    std::vector<int> magic_values = phase_detail::ValidateMagics(magics);
 
-    std::vector<int> magic_values(magics.size());
-    for (int i = 0; i < magics.size(); ++i) {
-        if (magics[i] == NA_INTEGER) {
-            stop("`magics` cannot contain NA");
-        }
-        magic_values[i] = magics[i];
-    }
-
-    std::mt19937_64 rng;
-    if (seed_nullable.isNotNull()) {
-        NumericVector seed_vec(seed_nullable);
-        if (seed_vec.size() != 1) {
-            stop("`seed` must be NULL or a length-1 numeric value");
-        }
-        double seed_value = seed_vec[0];
-        if (!std::isfinite(seed_value)) {
-            stop("`seed` must be finite when provided");
-        }
-        int64_t rounded = static_cast<int64_t>(std::llround(seed_value));
-        rng.seed(static_cast<std::mt19937_64::result_type>(rounded));
-    } else {
-        rng.seed(seed_from_random_device());
-    }
-    // Keep sampling deterministic when the caller supplied a seed; otherwise
-    // rely on std::random_device so repeated scans explore different strata.
+    // Keep sampling deterministic when the caller supplied a seed; otherwise rely on entropy.
+    std::mt19937_64 rng = phase_detail::InitializeRng(seed_nullable);
     std::uniform_real_distribution<double> unit_dist(0.0, 1.0);
 
     const int num_exponents = static_cast<int>(exponent_values.size());
@@ -136,9 +154,7 @@ List phase_orchestrator(int phases,
         stop("Requested grid is too large for available memory");
     }
 
-    // All scratch storage is allocated once to avoid quadratic reallocations
-    // while iterating over the magic grid; each candidate simply overwrites
-    // these buffers in place.
+    // All scratch storage is allocated once to avoid quadratic reallocations while scanning magics.
     std::vector<double> phase_abs(total_samples);
     std::vector<double> phase_signed(total_samples);
     std::vector<double> phase_sum(static_cast<std::size_t>(phases));
@@ -147,6 +163,7 @@ List phase_orchestrator(int phases,
                                        static_cast<std::size_t>(phases));
     std::vector<double> cell_errors(static_cast<std::size_t>(per_cell));
 
+    // When a candidate wins we copy its summaries into these vectors for the final report.
     std::vector<double> best_q_abs;
     std::vector<double> best_means;
     std::vector<double> best_medians;
@@ -162,6 +179,7 @@ List phase_orchestrator(int phases,
         checkUserInterrupt();
 
         const int magic = magic_values[magic_idx];
+        // Reset per-phase accumulators before reusing the buffers.
         std::fill(phase_sum.begin(), phase_sum.end(), 0.0);
         std::fill(offsets.begin(), offsets.end(), 0u);
 
@@ -173,6 +191,7 @@ List phase_orchestrator(int phases,
                 const double phase_high = phase_low + phase_width;
 
                 for (int sample_idx = 0; sample_idx < per_cell; ++sample_idx) {
+                    // Pick a mantissa inside the current phase slab to keep coverage uniform.
                     double u = unit_dist(rng);
                     double frac = phase_low + u * (phase_high - phase_low);
                     if (frac >= 1.0) {
@@ -201,8 +220,10 @@ List phase_orchestrator(int phases,
                     cell_errors[static_cast<std::size_t>(sample_idx)] = epsilon;
                 }
 
+                // Median signed error for the exponent/phase cell becomes the heat-map entry.
                 std::sort(cell_errors.begin(), cell_errors.end());
-                const double cell_median = median_sorted(cell_errors.data(), cell_errors.size());
+                const double cell_median =
+                    phase_detail::MedianSorted(cell_errors.data(), cell_errors.size());
                 candidate_heat[static_cast<std::size_t>(exp_idx) * static_cast<std::size_t>(phases) +
                                static_cast<std::size_t>(phase_idx)] = cell_median;
             }
@@ -220,11 +241,12 @@ List phase_orchestrator(int phases,
             std::sort(abs_begin, abs_begin + samples_per_phase);
             std::sort(signed_begin, signed_begin + samples_per_phase);
 
-            q_abs[phase_idx] = quantile_from_sorted(abs_begin, samples_per_phase, q);
-            medians[phase_idx] = median_sorted(signed_begin, samples_per_phase);
+            q_abs[phase_idx] = phase_detail::QuantileFromSorted(abs_begin, samples_per_phase, q);
+            medians[phase_idx] = phase_detail::MedianSorted(signed_begin, samples_per_phase);
             means[phase_idx] = phase_sum[phase_idx] / static_cast<double>(samples_per_phase);
         }
 
+        // J: the worst absolute error quantile across phases (lower is better).
         double J = 0.0;
         for (double val : q_abs) {
             if (val > J) {
@@ -232,6 +254,7 @@ List phase_orchestrator(int phases,
             }
         }
 
+        // Roughness: how jagged the signed means are as we walk around the circle of phases.
         double roughness = 0.0;
         for (int phase_idx = 0; phase_idx < phases; ++phase_idx) {
             const int prev = (phase_idx == 0) ? (phases - 1) : (phase_idx - 1);
@@ -239,6 +262,7 @@ List phase_orchestrator(int phases,
         }
         roughness /= static_cast<double>(phases);
 
+        // Prefer smaller J; break ties with the smoothest phase-to-phase transitions.
         if (!have_best || J < best_J || (std::abs(J - best_J) <= std::numeric_limits<double>::epsilon() && roughness < best_R)) {
             have_best = true;
             best_J = J;
@@ -266,6 +290,7 @@ List phase_orchestrator(int phases,
     NumericVector mean_vec(best_means.begin(), best_means.end());
     NumericVector median_vec(best_medians.begin(), best_medians.end());
 
+    // Phase-level summary table for the winning magic.
     DataFrame phase_tbl = DataFrame::create(
         Named("phase_id") = phase_ids,
         Named("q_abs") = q_abs_vec,
@@ -274,6 +299,7 @@ List phase_orchestrator(int phases,
         Named("n") = counts
     );
 
+    // Heat map captures how each exponent behaved inside each phase slice.
     NumericMatrix heat(num_exponents, phases);
     CharacterVector row_names(num_exponents);
     CharacterVector col_names(phases);

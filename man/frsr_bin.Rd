@@ -9,10 +9,13 @@ frsr_bin(
   x_max = 1,
   n_bins = 4,
   NRmax = 0,
+  objective = c("max_relative_error", "avg_relative_error", "rmse_relative_error"),
+  dependent = c("avg_relative_error", "max_relative_error", "rmse_relative_error"),
   float_samples = 1024,
   magic_samples = 2048,
   magic_min = 1596980000L,
-  magic_max = 1598050000L
+  magic_max = 1598050000L,
+  weighted = FALSE
 )
 }
 \arguments{
@@ -24,6 +27,14 @@ frsr_bin(
 
 \item{NRmax}{Integer. The maximum number of Newton-Raphson iterations (default: 0).}
 
+\item{objective}{Character scalar naming the metric to optimize. Defaults to
+\code{"max_relative_error"}.}
+
+\item{dependent}{Character scalar naming the metric reported as dependent on
+the chosen objective. Defaults to \code{"avg_relative_error"}.
+Both `objective` and `dependent` accept: \code{"max_relative_error"},
+\code{"avg_relative_error"}, or \code{"rmse_relative_error"}.}
+
 \item{float_samples}{Integer. The number of floating-point samples generated per bin.}
 
 \item{magic_samples}{Integer. The number of magic constant samples to generate per bin.}
@@ -31,6 +42,10 @@ frsr_bin(
 \item{magic_min}{Integer. The minimum magic constant to test (default: 1596980000).}
 
 \item{magic_max}{Integer. The maximum magic constant to test (default: 1598050000).}
+
+\item{weighted}{Logical; if \code{TRUE}, weight the float sampler by the
+number of representable significands in each exponent stratum. Default is
+\code{FALSE}.}
 }
 \value{
 A data frame with columns:
@@ -39,8 +54,8 @@ A data frame with columns:
     \item{Range_Min}{Minimum value of the bin range}
     \item{Range_Max}{Maximum value of the bin range}
     \item{Magic}{Optimal magic constant as an integer}
-    \item{Max_Relative_Error}{Minimum max relative error for the bin}
-    \item{Avg_Relative_Error}{Average relative error associated with minimax magic constant}
+    \item{Objective}{Metric which is minimized or maximized to determine optimal magic values}
+    \item{Dependent}{Value of a metric (usually an average) which results by reaching the objective.}
 }
 \description{
 Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins
