@@ -1,6 +1,6 @@
 #' Phase-Oriented Magic Search
 #'
-#' `frsr_phase()` stratifies floating-point samples by exponent and phase
+#' Stratifies floating-point samples by exponent and phase
 #' (fractional log2) bins, evaluates every candidate magic constant, and returns
 #' the magic that minimizes the worst phase-wise tail error. Statistics
 #' are returned to help diagnose phase bias.

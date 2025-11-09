@@ -1,7 +1,7 @@
 Package: frsrr
 Type: Package
 Title: A Customizable Fast Reciprocal Square Root
-Version: 0.8.9
+Version: 0.9.0
 Authors@R: person(given = "Adam",
                   family = "Hyland",
                   role = c("aut", "cre"),
