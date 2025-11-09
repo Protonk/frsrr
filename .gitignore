@@ -10,3 +10,4 @@ src/RcppExports.cpp
 src/*.so
 src/*.o
 tests/testthat/Rplots.pdf
+.vscode/tasks.json

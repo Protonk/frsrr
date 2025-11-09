@@ -21,9 +21,9 @@ frsr_sample(
 
 \item{magic_max}{Maximum value for the magic number range. Default is \code{1598050000L}}
 
-\item{x_min}{Minimum value for the input range. Default is \code{0.25}}
+\item{x_min}{Minimum value for the input range (must be > 0). Default is \code{0.25}}
 
-\item{x_max}{Maximum value for the input range. Default is \code{1.0}}
+\item{x_max}{Maximum value for the input range (must exceed \code{x_min}). Default is \code{1.0}}
 
 \item{weighted}{Logical; if \code{TRUE}, weight the sampler by the number of
 admissible significands in each exponent stratum. Default is \code{FALSE}.}

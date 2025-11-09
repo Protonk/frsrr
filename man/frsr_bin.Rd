@@ -19,9 +19,9 @@ frsr_bin(
 )
 }
 \arguments{
-\item{x_min}{Numeric. Default is 0.25.}
+\item{x_min}{Numeric lower bound (> 0). Default is 0.25.}
 
-\item{x_max}{Numeric. Default is 1.0.}
+\item{x_max}{Numeric upper bound (> x_min). Default is 1.0.}
 
 \item{n_bins}{Integer. The number of bins to divide the range into. Default is 4.}
 
@@ -54,8 +54,8 @@ A data frame with columns:
     \item{Range_Min}{Minimum value of the bin range}
     \item{Range_Max}{Maximum value of the bin range}
     \item{Magic}{Optimal magic constant as an integer}
-    \item{Objective}{Metric which is minimized or maximized to determine optimal magic values}
-    \item{Dependent}{Value of a metric (usually an average) which results by reaching the objective.}
+    \item{Objective}{Metric minimized for that bin (e.g., maximum relative error)}
+    \item{Dependent}{Secondary metric reported for the winning magic.}
 }
 \description{
 Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins
@@ -77,10 +77,10 @@ periodic over integral powers of two, and so loops twice before the FISR does on
 # Generate optimal magic constants for the range [0.25, 1.0] divided into 4 bins
 result <- frsr_bin()
 print(result)
-#   Location Range_Min Range_Max      Magic    Sum_Error N_bins
-# 1        1 0.2500000 0.3535534 1597413411 4.549199e-04      4
-# 2        2 0.3535534 0.5000000 1597115686 6.175506e-05      4
-# 3        3 0.5000000 0.7071068 1597150657 3.486200e-05      4
-# 4        4 0.7071068 1.0000000 1597488127 8.389181e-04      4
+#   N_bins Location Range_Min Range_Max      Magic   Objective   Dependent
+# 1      4        1 0.2500000 0.3535534 1597413411 0.0004549199 0.000134129
+# 2      4        2 0.3535534 0.5000000 1597115686 0.0000617551 0.000033011
+# 3      4        3 0.5000000 0.7071068 1597150657 0.0000348620 0.000021047
+# 4      4        4 0.7071068 1.0000000 1597488127 0.0008389181 0.000244221
 # }
 }
