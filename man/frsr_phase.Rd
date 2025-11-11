@@ -8,7 +8,7 @@ frsr_phase(
   phases = 128L,
   exponents = -62L:62L,
   per_cell = 64L,
-  magics = default_magic_grid(),
+  magics = c(1596980000L, 1598050000L),
   q = 0.95,
   NRmax = 0L,
   seed = NULL
@@ -47,7 +47,7 @@ deterministic; otherwise a fresh seed is drawn.}
 }
 }
 \description{
-`frsr_phase()` stratifies floating-point samples by exponent and phase
+Stratifies floating-point samples by exponent and phase
 (fractional log2) bins, evaluates every candidate magic constant, and returns
 the magic that minimizes the worst phase-wise tail error. Statistics
 are returned to help diagnose phase bias.
