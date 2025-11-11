@@ -15,17 +15,17 @@ NULL
 #'   admissible significands in each exponent stratum. Default is \code{FALSE}.
 #' @param ... Additional arguments passed to \code{frsr}.
 #'
-#' @details 
-#' 
+#' @details
+#'
 #' The default range for the magic number was determined by experiment.
 #' Values within this range are relatively good restoring constants, with
 #' numbers much higher or lower requiring more iterations to converge or
 #' not converging at all.
 #'
-#' Floating point values are searched by stratified sampling 
+#' Floating point values are searched by stratified sampling
 #' which samples uniformly within exponent ranges, as that is how
-#' floating point numbers are distributed. The default range is 
-#' chosen because the the error of the FISR is periodic 
+#' floating point numbers are distributed. The default range is
+#' chosen because the the error of the FISR is periodic
 #' from 0.25 to 1.0.
 #'
 #' @return
@@ -46,9 +46,9 @@ NULL
 #'     \item{A}{Newton-Raphson parameter A}
 #'     \item{B}{Newton-Raphson parameter B}
 #'     \item{tol}{Specified tolerance}
-#' 
-#' @seealso 
-#' 
+#'
+#' @seealso
+#'
 #' \code{\link{frsr}}
 #'
 #' @references
@@ -57,8 +57,8 @@ NULL
 #'
 #' Pharr, M. (2022) Sampling in Floating Point (2/3): 1D Intervals. Matt Pharr's Blog, \url{https://pharr.org/matt/blog/2022/03/14/sampling-float-intervals}
 #'
-#' @examples 
-#' 
+#' @examples
+#'
 #' #' \donttest{
 #' # Generate 4 samples using default parameters
 #' samples <- frsr_sample(4)
@@ -81,6 +81,10 @@ frsr_sample <- function(n,
                         x_min = 0.25, x_max = 1.0,
                         weighted = FALSE,
                         ...) {
+    # truthify to safely pass to cpp
+    weighted <- isTRUE(weighted)
+
+    # bounds check hopefully adds to readability
     normalize_bound <- function(value, label) {
         if (is.null(value)) {
             return(NULL)
@@ -112,7 +116,6 @@ frsr_sample <- function(n,
         sample(magic_min:magic_max, n, replace = TRUE)
     }
     # Determine inputs based on whether x_min or x_max is NULL
-    weighted <- isTRUE(weighted)
     inputs <- if (is.null(x_min)) {
         rep(x_max, n)  # Use x_max if x_min is NULL
     } else if (is.null(x_max)) {
