@@ -59,10 +59,6 @@ describe("frsr_sample", {
         )
     })
 
-    it("honors midpoint sampling", {
-        result <- frsr_sample(4, x_min = 1, x_max = 5, method = "midpoint")
-        expect_equal(result$input, c(1.5, 2.5, 3.5, 4.5))
-    })
 })
 
 describe("sample_inputs", {
@@ -84,11 +80,6 @@ describe("sample_inputs", {
         expect_error(sample_call(4, 0, 1, method = "log_stratified"), "must be > 0")
         expect_error(sample_call(4, 1, 2, method = "unknown"), "Unknown sampler method")
         expect_error(sample_call(4, 1, 2, weighted = TRUE, method = "uniform"), "only supported")
-    })
-
-    it("generates midpoint grids deterministically", {
-        samples <- sample_call(4, 1, 5, method = "midpoint")
-        expect_equal(samples, c(1.5, 2.5, 3.5, 4.5))
     })
 
     it("keeps samples within range", {

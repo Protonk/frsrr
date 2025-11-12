@@ -154,20 +154,6 @@ NumericVector LogStratified(int n, double x_min, double x_max, bool weighted) {
     return result;
 }
 
-NumericVector MidpointGrid(int n, double x_min, double x_max) {
-    NumericVector result(n);
-    if (n == 0) {
-        return result;
-    }
-    const double span = x_max - x_min;
-    const double inv_n = 1.0 / static_cast<double>(n);
-    for (int i = 0; i < n; ++i) {
-        double center = (static_cast<double>(i) + 0.5) * inv_n;
-        result[i] = x_min + span * center;
-    }
-    return result;
-}
-
 inline double FractionalPart(double value) {
     double frac = value - std::floor(value);
     if (frac < 0.0) {
@@ -224,9 +210,6 @@ NumericVector sample_inputs(int n,
     }
     if (weighted) {
         throw std::invalid_argument("`weighted = TRUE` is only supported for method = 'log_stratified'");
-    }
-    if (method == "midpoint") {
-        return sample_detail::MidpointGrid(n, x_min, x_max);
     }
     if (method == "irrational") {
         return sample_detail::IrrationalRotation(n, x_min, x_max);

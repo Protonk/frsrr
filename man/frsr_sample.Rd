@@ -11,7 +11,7 @@ frsr_sample(
   x_min = 0.25,
   x_max = 1,
   weighted = FALSE,
-  method = c("log_stratified", "midpoint", "irrational", "uniform"),
+  method = c("log_stratified", "irrational", "uniform"),
   ...
 )
 }
@@ -31,7 +31,7 @@ admissible significands in each exponent stratum. Only applicable when
 \code{method = "log_stratified"}. Default is \code{FALSE}.}
 
 \item{method}{Character scalar selecting the sampler. Options are
-\code{"midpoint"}, \code{"irrational"}, \code{"uniform"}, or
+\code{"irrational"}, \code{"uniform"}, or
 \code{"log_stratified"} (the legacy default).}
 
 \item{...}{Additional arguments passed to \code{frsr}.}
@@ -64,22 +64,18 @@ Values within this range are relatively good restoring constants, with
 numbers much higher or lower requiring more iterations to converge or
 not converging at all.
 
-Four sampler modes allow you to explore different coverage patterns over
+Three sampler modes explore different coverage patterns over
 \code{[x_min, x_max]}:
 \itemize{
-  \item{\strong{Midpoint grid}:} Partition the interval into \code{n} equal bins
-    and take each midpoint. Deterministic coverage is helpful for quick sweeps.
+  \item{\strong{Log-stratified}:} Sample floats uniformly across exponent strata
+    (optionally weighted by the number of representable significands per stratum).
+    This method is the default and covers the FP subset of the reals well.
   \item{\strong{Irrational rotation}:} Step through \code{[0, 1)} via the golden
-    ratio increment and scale to \code{[x_min, x_max]}. The start point is drawn
-    from R's RNG so calls remain reproducible under \code{set.seed()}.
+    ratio increment and rescale. This method provides low-discrepancy coverage
+    of the unit interval.
   \item{\strong{Uniform}:} Draw from the standard R uniform sampler and rescale.
-  \item{\strong{Log-stratified}:} Preserve the original behavior by sampling
-    floats uniformly across exponent strata (optionally weighted by the number
-    of representable significands per stratum).
+   Takes longer to smooth out than irrational rotation.
 }
-
-The default range for log-stratified sampling is chosen because the error of the
-FRSR is periodic from 0.25 to 1.0.
 }
 \examples{
 
