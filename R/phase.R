@@ -5,6 +5,11 @@
 #' the magic that minimizes the worst phase-wise tail error. Statistics
 #' are returned to help diagnose phase bias.
 #'
+#' @details
+#' log2 phases are a useful way to this function as it contains a
+#' linear approximation to log2 whose performance varies greatly
+#' depending on proximity to powers of two.
+#'
 #' @param phases Number of equally sized phase bins spanning `[0, 1)`. Must be
 #'   a positive integer.
 #' @param exponents Integer vector of unbiased exponents. Values must keep the
@@ -15,8 +20,6 @@
 #'   Must satisfy `0 < q <= 1`.
 #' @param NRmax Newton steps applied through [`frsr0()`]. Reuses existing
 #'   Newton logic; the default sticks with the raw restoring constant path.
-#' @param seed Optional numeric scalar. When supplied the sampler becomes
-#'   deterministic; otherwise a fresh seed is drawn.
 #'
 #' @return
 #' `frsr_phase()` returns a list with components:
@@ -37,8 +40,7 @@
 #'   phases = 32L,
 #'   exponents = -8L:8L,
 #'   per_cell = 8L,
-#'   magics = magics,
-#'   seed = 1
+#'   magics = magics
 #' )
 #' phase_fit$magic
 #' }
@@ -49,15 +51,13 @@ frsr_phase <- function(phases = 128L,
                        per_cell = 64L,
                        magics = c(1596980000L, 1598050000L),
                        q = 0.95,
-                       NRmax = 0L,
-                       seed = NULL) {
+                       NRmax = 0L) {
   phases <- as.integer(phases)[1]
   exponents <- as.integer(exponents)
   per_cell <- as.integer(per_cell)[1]
   magics <- as.integer(magics)
   q <- as.numeric(q)[1]
   NRmax <- as.integer(NRmax)[1]
-  seed_arg <- if (is.null(seed)) NULL else as.numeric(seed)[1]
 
   # Keep conversion/validation in R so the hot C++ path can assume scalars,
   # which avoids repeatedly checking lengths inside the tight sampling loops.
@@ -69,7 +69,6 @@ frsr_phase <- function(phases = 128L,
     per_cell,
     magics,
     q,
-    NRmax,
-    seed_arg
+    NRmax
   )
 }

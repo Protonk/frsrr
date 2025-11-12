@@ -12,7 +12,8 @@ frsr(
   B = 0.5,
   tol = 0,
   detail = FALSE,
-  keep_params = FALSE
+  keep_params = FALSE,
+  threads = getOption("frsrr.threads", NA_integer_)
 )
 }
 \arguments{
@@ -31,6 +32,10 @@ frsr(
 \item{detail}{Logical. If \code{TRUE}, a data frame with detailed results is returned. Default is \code{FALSE}.}
 
 \item{keep_params}{Logical. If \code{TRUE}, generation parameters are included in detailed output. Default is \code{FALSE}.}
+
+\item{threads}{Positive integer passed to \code{RcppParallel::setThreadOptions()} before invoking
+the parallel C++ workers. Defaults to \code{getOption("frsrr.threads", NA)}, which falls back
+to \code{RcppParallel::defaultNumThreads()} when unset.}
 }
 \value{
 \code{frsr} returns a numeric vector of \code{length(x)}.

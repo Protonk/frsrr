@@ -149,7 +149,7 @@ struct FRSRWorker : public Worker {
 
 // [[Rcpp::export]]
 DataFrame frsr(DataFrame input, bool keep_params) {
-    
+    RNGScope scope;  // Ensure callers that set.seed() see deterministic detail outputs.
     // Extract input parameters
     NumericVector x = input["x"];
     IntegerVector magic = input["magic"];
@@ -197,6 +197,5 @@ DataFrame frsr(DataFrame input, bool keep_params) {
         );
     }
 }
-
 
 

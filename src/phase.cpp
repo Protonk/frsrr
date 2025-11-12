@@ -3,7 +3,6 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
-#include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -74,34 +73,6 @@ inline std::vector<int> ValidateMagics(const IntegerVector& magics) {
     return values;
 }
 
-// ---- RNG helpers ------------------------------------------------------------
-inline std::mt19937_64::result_type SeedFromRandomDevice() {
-    std::random_device rd;
-    // Two draws to give the 64-bit engine a wider seed surface.
-    uint64_t high = static_cast<uint64_t>(rd()) << 32;
-    uint64_t low = static_cast<uint64_t>(rd());
-    return high ^ low;
-}
-
-inline std::mt19937_64 InitializeRng(const Nullable<NumericVector>& seed_nullable) {
-    std::mt19937_64 rng;
-    if (seed_nullable.isNotNull()) {
-        NumericVector seed_vec(seed_nullable);
-        if (seed_vec.size() != 1) {
-            stop("`seed` must be NULL or a length-1 numeric value");
-        }
-        double seed_value = seed_vec[0];
-        if (!std::isfinite(seed_value)) {
-            stop("`seed` must be finite when provided");
-        }
-        int64_t rounded = static_cast<int64_t>(std::llround(seed_value));
-        rng.seed(static_cast<std::mt19937_64::result_type>(rounded));
-        return rng;
-    }
-    rng.seed(SeedFromRandomDevice());
-    return rng;
-}
-
 }  // namespace phase_detail
 
 // [[Rcpp::export]]
@@ -110,8 +81,7 @@ List phase_orchestrator(int phases,
                         int per_cell,
                         IntegerVector magics,
                         double q,
-                        int NRmax,
-                        Nullable<NumericVector> seed_nullable) {
+                        int NRmax) {
     if (phases <= 0) {
         stop("`phases` must be positive");
     }
@@ -131,13 +101,11 @@ List phase_orchestrator(int phases,
         stop("`NRmax` must be non-negative");
     }
 
+    RNGScope scope;  // Keep RNG state consistent with R's set.seed().
+
     // Copy R inputs into STL containers once so inner loops can stay pointer-friendly.
     std::vector<int> exponent_values = phase_detail::ValidateExponents(exponents);
     std::vector<int> magic_values = phase_detail::ValidateMagics(magics);
-
-    // Keep sampling deterministic when the caller supplied a seed; otherwise rely on entropy.
-    std::mt19937_64 rng = phase_detail::InitializeRng(seed_nullable);
-    std::uniform_real_distribution<double> unit_dist(0.0, 1.0);
 
     const int num_exponents = static_cast<int>(exponent_values.size());
     const std::size_t samples_per_phase =
@@ -192,7 +160,7 @@ List phase_orchestrator(int phases,
 
                 for (int sample_idx = 0; sample_idx < per_cell; ++sample_idx) {
                     // Pick a mantissa inside the current phase slab to keep coverage uniform.
-                    double u = unit_dist(rng);
+                    double u = unif_rand();
                     double frac = phase_low + u * (phase_high - phase_low);
                     if (frac >= 1.0) {
                         frac = std::nextafter(1.0, 0.0);

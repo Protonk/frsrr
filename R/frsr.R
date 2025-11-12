@@ -15,6 +15,9 @@ NULL
 #' @param tol The absolute relative error at which to stop early. Default is 0 (no early stopping).
 #' @param detail Logical. If \code{TRUE}, a data frame with detailed results is returned. Default is \code{FALSE}.
 #' @param keep_params Logical. If \code{TRUE}, generation parameters are included in detailed output. Default is \code{FALSE}.
+#' @param threads Positive integer passed to \code{RcppParallel::setThreadOptions()} before invoking
+#'   the parallel C++ workers. Defaults to \code{getOption("frsrr.threads", NA)}, which falls back
+#'   to \code{RcppParallel::defaultNumThreads()} when unset.
 #'
 #' @return
 #' \code{frsr} returns a numeric vector of \code{length(x)}.
@@ -98,7 +101,9 @@ NULL
 #' @export
 frsr <- function(x, magic = 0x5f3759df, NRmax = 1,
                  A = 1.5, B = 0.5, tol = 0,
-                 detail = FALSE, keep_params = FALSE) {
+                 detail = FALSE, keep_params = FALSE,
+                 threads = getOption("frsrr.threads", NA_integer_)) {
+  threads <- frsrr_configure_threads(threads)
   arg_df <- data.frame(x = x, magic = magic,
                        NRmax = NRmax, tol = tol,
                        A = A, B = B)

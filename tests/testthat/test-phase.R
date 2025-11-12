@@ -1,12 +1,12 @@
 describe("frsr_phase", {
   it("returns expected structure", {
+    set.seed(11)
     result <- frsr_phase(
       phases = 8L,
       exponents = -2L:2L,
       per_cell = 4L,
       magics = c(1597413411L, 1597200000L),
-      q = 0.9,
-      seed = 11
+      q = 0.9
     )
 
     expect_type(result$magic, "integer")
@@ -22,21 +22,36 @@ describe("frsr_phase", {
   })
 
   it("worsens objective for clearly bad magic constants", {
+    set.seed(99)
     good <- frsr_phase(
       phases = 4L,
       exponents = -3L:3L,
       per_cell = 6L,
-      magics = 0x5f3759df,
-      seed = 99
+      magics = 0x5f3759df
     )
+    set.seed(99)
     bad <- frsr_phase(
       phases = 4L,
       exponents = -3L:3L,
       per_cell = 6L,
-      magics = 0x5f100000,
-      seed = 99
+      magics = 0x5f100000
     )
 
     expect_lt(good$J, bad$J)
+  })
+
+  it("is reproducible with a fixed seed", {
+    args <- list(
+      phases = 6L,
+      exponents = -2L:2L,
+      per_cell = 4L,
+      magics = c(1597413411L, 1597200000L),
+      q = 0.8
+    )
+    set.seed(2024)
+    first <- do.call(frsr_phase, args)
+    set.seed(2024)
+    second <- do.call(frsr_phase, args)
+    expect_identical(first, second)
   })
 })

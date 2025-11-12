@@ -99,4 +99,18 @@ describe("frsr_bin", {
     expect_equal(nrow(result), 3)
     expect_identical(unique(result$N_bins), 3L)
   })
+
+  it("is reproducible with matching seeds", {
+    args <- list(
+      float_samples = 8,
+      magic_samples = 8,
+      magic_min = 1596980000L,
+      magic_max = 1596980100L
+    )
+    set.seed(77)
+    first <- do.call(frsr_bin, args)
+    set.seed(77)
+    second <- do.call(frsr_bin, args)
+    expect_identical(first, second)
+  })
 })

@@ -49,6 +49,7 @@ print(result)
 
 ## Generate 4 samples using default parameters and random input and magic values
 # Optionally, parameters can be returned with keep_params = TRUE
+set.seed(123)
 samples <- frsr_sample(4, keep_params = TRUE)
 # knitr's kable() makes tables look better on github
 library(knitr)
@@ -61,6 +62,7 @@ kable(samples, format = "simple")
 #  0.9425029   0.9680235    1.024561   1.024561   0.0053300    0.0565371       1   1597011026       1   1.5   0.5     0
 
 ## Find optimal constant for 4 bins betweeon 0.25 and 1.0
+set.seed(123)
 bins <-  frsr_bin(n_bins = 4)
 kable(bins, format = "simple")
 #  Location   Range_Min   Range_Max        Magic   Avg_Relative_Error   Max_Relative_Error    N
@@ -70,6 +72,13 @@ kable(bins, format = "simple")
 #         3      0.6250      0.8125   1597247742            0.0083959            0.0136274    4
 #         4      0.8125      1.0000   1597610966            0.0158552            0.0252852    4
 ```
+
+## Reproducibility
+
+- All C++ entry points wrap their random draws in `Rcpp::RNGScope`, so `set.seed()` in R fully controls the stochastic components exposed via `.Call()` and the higher level helpers.
+- Functions that fan out across threads (`frsr()` and `frsr_bin()`) accept a `threads` argument (and respect `getOption("frsrr.threads")`) that internally calls `RcppParallel::setThreadOptions()`, keeping the worker count explicit and stable across sessions.
+- Sampling helpers never touch `unif_rand()` from worker threads; instead, the main R thread prepares any random inputs and the parallel code only performs pure numeric transforms. This keeps the results independent of thread scheduling.
+- The test suite pins a seed, runs the stochastic helpers twice, and checks for bitwise identical results so regressions in RNG wiring are caught automatically.
 
 ## FISR or FRSR?
 

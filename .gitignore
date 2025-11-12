@@ -4,11 +4,11 @@
 .Ruserdata
 .DS_Store
 frsrr.Rproj
-R/RcppExports.R
-src/RcppExports.cpp
 .vscode/settings.json
 src/*.so
 src/*.o
 tests/testthat/Rplots.pdf
 .vscode/tasks.json
 /..Rcheck
+*.Rcheck/
+frsrr_*.tar.gz

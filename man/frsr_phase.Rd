@@ -10,8 +10,7 @@ frsr_phase(
   per_cell = 64L,
   magics = c(1596980000L, 1598050000L),
   q = 0.95,
-  NRmax = 0L,
-  seed = NULL
+  NRmax = 0L
 )
 }
 \arguments{
@@ -30,9 +29,6 @@ Must satisfy `0 < q <= 1`.}
 
 \item{NRmax}{Newton steps applied through [`frsr0()`]. Reuses existing
 Newton logic; the default sticks with the raw restoring constant path.}
-
-\item{seed}{Optional numeric scalar. When supplied the sampler becomes
-deterministic; otherwise a fresh seed is drawn.}
 }
 \value{
 `frsr_phase()` returns a list with components:
@@ -52,6 +48,11 @@ Stratifies floating-point samples by exponent and phase
 the magic that minimizes the worst phase-wise tail error. Statistics
 are returned to help diagnose phase bias.
 }
+\details{
+log2 phases are a useful way to this function as it contains a
+linear approximation to log2 whose performance varies greatly
+depending on proximity to powers of two.
+}
 \examples{
 \donttest{
 magics <- as.integer(seq.int(0x5f3750df, 0x5f3765df, by = 512L))
@@ -59,8 +60,7 @@ phase_fit <- frsr_phase(
   phases = 32L,
   exponents = -8L:8L,
   per_cell = 8L,
-  magics = magics,
-  seed = 1
+  magics = magics
 )
 phase_fit$magic
 }

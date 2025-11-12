@@ -58,10 +58,10 @@ Values within this range are relatively good restoring constants, with
 numbers much higher or lower requiring more iterations to converge or
 not converging at all.
 
-Floating point values are searched by stratified sampling 
+Floating point values are searched by stratified sampling
 which samples uniformly within exponent ranges, as that is how
-floating point numbers are distributed. The default range is 
-chosen because the the error of the FISR is periodic 
+floating point numbers are distributed. The default range is
+chosen because the the error of the FISR is periodic
 from 0.25 to 1.0.
 }
 \examples{

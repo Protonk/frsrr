@@ -15,7 +15,8 @@ frsr_bin(
   magic_samples = 2048,
   magic_min = 1596980000L,
   magic_max = 1598050000L,
-  weighted = FALSE
+  weighted = FALSE,
+  threads = getOption("frsrr.threads", NA_integer_)
 )
 }
 \arguments{
@@ -46,6 +47,11 @@ Both `objective` and `dependent` accept: \code{"max_relative_error"},
 \item{weighted}{Logical; if \code{TRUE}, weight the float sampler by the
 number of representable significands in each exponent stratum. Default is
 \code{FALSE}.}
+
+\item{threads}{Positive integer forwarded to \code{RcppParallel::setThreadOptions()}
+before running the parallel candidate search. Defaults to
+\code{getOption("frsrr.threads", NA)} which falls back to the package's
+compiled default thread count when unset.}
 }
 \value{
 A data frame with columns:
@@ -59,16 +65,16 @@ A data frame with columns:
 }
 \description{
 Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins
-by minimizing the maximum relative error.
+by minimizing an objective metric.
 }
 \details{
 This function divides the range [x_min, x_max] into n_bins bins and generates float_samples
 floating-point samples within each bin. It then tests magic_samples magic constants within
 the range [magic_min, magic_max] to find the optimal magic constant for each bin that minimizes
 the maximum relative error per bin. The achievable error and optimal constants will change with
-bin size and number of bins, as well as the integer and float samples. 
+bin size and number of bins, as well as the integer and float samples.
 
-The FRSR is periodic over 0.25 to 1.0 with a magic constant of 0x5f3759df. I don't know if 
+The FRSR is periodic over 0.25 to 1.0 with a magic constant of 0x5f3759df. I don't know if
 this is generally true. Interestingly, the linear approximation to the logarithm used is
 periodic over integral powers of two, and so loops twice before the FISR does once.
 }

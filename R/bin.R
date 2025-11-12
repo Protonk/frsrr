@@ -6,18 +6,11 @@ NULL
 #' FRSR Bin
 #'
 #' Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins
-#' by minimizing the maximum relative error. 
+#' by minimizing an objective metric.
 #'
 #' @param x_min Numeric lower bound (> 0). Default is 0.25.
 #' @param x_max Numeric upper bound (> x_min). Default is 1.0.
 #' @param n_bins Integer. The number of bins to divide the range into. Default is 4.
-#' @param float_samples Integer. The number of floating-point samples generated per bin.
-#' @param magic_samples Integer. The number of magic constant samples to generate per bin.
-#' @param magic_min Integer. The minimum magic constant to test (default: 1596980000).
-#' @param magic_max Integer. The maximum magic constant to test (default: 1598050000).
-#' @param weighted Logical; if \code{TRUE}, weight the float sampler by the
-#'   number of representable significands in each exponent stratum. Default is
-#'   \code{FALSE}.
 #' @param NRmax Integer. The maximum number of Newton-Raphson iterations (default: 0).
 #' @param objective Character scalar naming the metric to optimize. Defaults to
 #'   \code{"max_relative_error"}.
@@ -25,6 +18,17 @@ NULL
 #'   the chosen objective. Defaults to \code{"avg_relative_error"}.
 #'   Both `objective` and `dependent` accept: \code{"max_relative_error"},
 #'   \code{"avg_relative_error"}, or \code{"rmse_relative_error"}.
+#' @param float_samples Integer. The number of floating-point samples generated per bin.
+#' @param magic_samples Integer. The number of magic constant samples to generate per bin.
+#' @param magic_min Integer. The minimum magic constant to test (default: 1596980000).
+#' @param magic_max Integer. The maximum magic constant to test (default: 1598050000).
+#' @param weighted Logical; if \code{TRUE}, weight the float sampler by the
+#'   number of representable significands in each exponent stratum. Default is
+#'   \code{FALSE}.
+#' @param threads Positive integer forwarded to \code{RcppParallel::setThreadOptions()}
+#'   before running the parallel candidate search. Defaults to
+#'   \code{getOption("frsrr.threads", NA)} which falls back to the package's
+#'   compiled default thread count when unset.
 #'
 #' @return
 #' A data frame with columns:
@@ -41,12 +45,12 @@ NULL
 #' floating-point samples within each bin. It then tests magic_samples magic constants within
 #' the range [magic_min, magic_max] to find the optimal magic constant for each bin that minimizes
 #' the maximum relative error per bin. The achievable error and optimal constants will change with
-#' bin size and number of bins, as well as the integer and float samples. 
-#' 
-#' The FRSR is periodic over 0.25 to 1.0 with a magic constant of 0x5f3759df. I don't know if 
+#' bin size and number of bins, as well as the integer and float samples.
+#'
+#' The FRSR is periodic over 0.25 to 1.0 with a magic constant of 0x5f3759df. I don't know if
 #' this is generally true. Interestingly, the linear approximation to the logarithm used is
 #' periodic over integral powers of two, and so loops twice before the FISR does once.
-#' 
+#'
 #' @examples
 #' \donttest{
 #' # Generate optimal magic constants for the range [0.25, 1.0] divided into 4 bins
@@ -70,7 +74,8 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
                      float_samples = 1024, magic_samples = 2048,
                      magic_min = 1596980000L,
                      magic_max = 1598050000L,
-                     weighted = FALSE) {
+                     weighted = FALSE,
+                     threads = getOption("frsrr.threads", NA_integer_)) {
   objective <- match.arg(objective)
   dependent <- match.arg(dependent)
 
@@ -83,6 +88,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
   magic_max <- as.integer(magic_max)[1]
   NRmax <- as.integer(NRmax)[1]
   weighted <- isTRUE(weighted)
+  threads <- frsrr_configure_threads(threads)
 
   # Argument coercions above intentionally drop vector inputs to a single scalar;
   # the downstream C++ helpers only read the first element, so we keep behavior
@@ -110,7 +116,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
 
   # Divide [x_min, x_max] into evenly spaced bin boundaries
   bin_edges <- seq(x_min, x_max, length.out = n_bins + 1)
-  
+
   # Generate results for each bin
   bins <- lapply(seq_len(n_bins), function(i) {
     bin_min <- bin_edges[i]

@@ -43,6 +43,14 @@ describe("frsr_sample", {
         expect_identical(names(result), expected_cols)
         expect_true(all(vapply(result, is.numeric, logical(1))))
     })
+
+    it("is reproducible when seed is set", {
+        set.seed(123)
+        first <- frsr_sample(6, keep_params = TRUE)
+        set.seed(123)
+        second <- frsr_sample(6, keep_params = TRUE)
+        expect_identical(first, second)
+    })
 })
 
 describe("bounded_stratified_sample", {
@@ -93,5 +101,27 @@ describe("bounded_stratified_sample", {
         expect_true(all(is.finite(samples)))
         expect_true(all(samples >= 0.5))
         expect_true(all(samples < 2))
+    })
+
+    it("is reproducible when seed is set", {
+        set.seed(42)
+        first <- .Call(
+            "_frsrr_bounded_stratified_sample",
+            PACKAGE = "frsrr",
+            32L,
+            log2(0.5),
+            log2(2),
+            TRUE
+        )
+        set.seed(42)
+        second <- .Call(
+            "_frsrr_bounded_stratified_sample",
+            PACKAGE = "frsrr",
+            32L,
+            log2(0.5),
+            log2(2),
+            TRUE
+        )
+        expect_identical(first, second)
     })
 })

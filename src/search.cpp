@@ -226,7 +226,7 @@ NumericVector bounded_stratified_sample(int n, double low, double high, bool wei
 }
 
 // -----------------------------------------------------------------------------
-// MagicReducer
+// MagicReducer for candidate search
 // -----------------------------------------------------------------------------
 
 // Each worker thread aggregates error statistics for every candidate over a slice of the samples.
@@ -301,6 +301,8 @@ DataFrame search_optimal_constant(NumericVector floats,
     if (floats.length() == 0) {
         stop("`floats` must contain at least one value");
     }
+
+    RNGScope scope;  // Keep R's RNG state scoped even though this path is deterministic today.
 
     detail::ValidateMetricName(objective_metric, "objective");
     detail::ValidateMetricName(dependent_metric, "dependent");

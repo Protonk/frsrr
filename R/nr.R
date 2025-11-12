@@ -3,8 +3,8 @@
 #' Set custom Newton-Raphson formula for the Fast Reciprocal Square Root.
 #'
 #' @param x A numeric vector of input values.
-#' @param formula A custom formula as a function of \code{y} and \code{x}.
 #' @param magic An optional magic number for the initial guess.
+#' @param formula A custom formula as a function of \code{y} and \code{x}.
 #' @param NRmax Number of iterations to perform. Default is \code{1}.
 #' @param tol Tolerance level for stopping criterion. Default is \code{0}.
 #'

@@ -118,4 +118,11 @@ describe("frsr", {
     expect_identical(result$NRmax, recycled_iters)
     expect_identical(result$iters, recycled_iters)
   })
+
+  it("returns identical results across runs", {
+    input <- c(0.25, 0.5, 1, 2)
+    first <- frsr(input)
+    second <- frsr(input)
+    expect_identical(first, second)
+  })
 })
