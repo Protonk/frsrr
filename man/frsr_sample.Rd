@@ -10,7 +10,6 @@ frsr_sample(
   magic_max = 1598050000L,
   x_min = 0.25,
   x_max = 1,
-  weighted = FALSE,
   method = c("log_stratified", "irrational", "uniform"),
   ...
 )
@@ -25,10 +24,6 @@ frsr_sample(
 \item{x_min}{Minimum value for the input range (must be > 0). Default is \code{0.25}}
 
 \item{x_max}{Maximum value for the input range (must exceed \code{x_min}). Default is \code{1.0}}
-
-\item{weighted}{Logical; if \code{TRUE}, weight the sampler by the number of
-admissible significands in each exponent stratum. Only applicable when
-\code{method = "log_stratified"}. Default is \code{FALSE}.}
 
 \item{method}{Character scalar selecting the sampler. Options are
 \code{"irrational"}, \code{"uniform"}, or
@@ -68,7 +63,6 @@ Three sampler modes explore different coverage patterns over
 \code{[x_min, x_max]}:
 \itemize{
   \item{\strong{Log-stratified}:} Sample floats uniformly across exponent strata
-    (optionally weighted by the number of representable significands per stratum).
     This method is the default and covers the FP subset of the reals well.
   \item{\strong{Irrational rotation}:} Step through \code{[0, 1)} via the golden
     ratio increment and rescale. This method provides low-discrepancy coverage

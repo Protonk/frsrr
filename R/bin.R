@@ -22,13 +22,14 @@ NULL
 #' @param magic_samples Integer. The number of magic constant samples to generate per bin.
 #' @param magic_min Integer. The minimum magic constant to test (default: 1596980000).
 #' @param magic_max Integer. The maximum magic constant to test (default: 1598050000).
-#' @param weighted Logical; if \code{TRUE}, weight the float sampler by the
-#'   number of representable significands in each exponent stratum. Default is
-#'   \code{FALSE}.
 #' @param threads Positive integer forwarded to \code{RcppParallel::setThreadOptions()}
 #'   before running the parallel candidate search. Defaults to
 #'   \code{getOption("frsrr.threads", NA)} which falls back to the package's
 #'   compiled default thread count when unset.
+#' @param ... Optional sampler arguments forwarded to the float sampler.
+#'   Currently supports \code{method} (one of \code{"log_stratified"},
+#'   \code{"irrational"}, or \code{"uniform"}). When omitted,
+#'   \code{method = "log_stratified"}.
 #'
 #' @return
 #' A data frame with columns:
@@ -74,8 +75,8 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
                      float_samples = 1024, magic_samples = 2048,
                      magic_min = 1596980000L,
                      magic_max = 1598050000L,
-                     weighted = FALSE,
-                     threads = getOption("frsrr.threads", NA_integer_)) {
+                     threads = getOption("frsrr.threads", NA_integer_),
+                     ...) {
   objective <- match.arg(objective)
   dependent <- match.arg(dependent)
 
@@ -87,8 +88,25 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
   magic_min <- as.integer(magic_min)[1]
   magic_max <- as.integer(magic_max)[1]
   NRmax <- as.integer(NRmax)[1]
-  weighted <- isTRUE(weighted)
   threads <- frsrr_configure_threads(threads)
+
+  dots <- list(...)
+  dot_names <- names(dots)
+  if (length(dots) && (is.null(dot_names) || any(!nzchar(dot_names)))) {
+    stop("All arguments passed through `...` must be named")
+  }
+  allowed_sampler_args <- "method"
+  unused <- setdiff(dot_names, allowed_sampler_args)
+  if (length(unused)) {
+    stop("Unused arguments in `...`: ", paste(unused, collapse = ", "))
+  }
+
+  sampler_method <- dots$method
+  if (is.null(sampler_method)) {
+    sampler_method <- "log_stratified"
+  } else {
+    sampler_method <- as.character(sampler_method)[1]
+  }
 
   # Argument coercions above intentionally drop vector inputs to a single scalar;
   # the downstream C++ helpers only read the first element, so we keep behavior
@@ -121,9 +139,14 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
   bins <- lapply(seq_len(n_bins), function(i) {
     bin_min <- bin_edges[i]
     bin_max <- bin_edges[i + 1]
-    floats <- .Call('_frsrr_sample_inputs',
-                    PACKAGE = 'frsrr',
-                    float_samples, bin_min, bin_max, weighted, "log_stratified")
+    # floats are generated directly from the sampler
+    # They are independent of the choice of magic, or how many are sampled.
+    floats <- .frsrr_draw_inputs(
+      n = float_samples,
+      x_min = bin_min,
+      x_max = bin_max,
+      method = sampler_method
+    )
     # Magic constants are explored via simple sampling; drawing with replacement
     # keeps the runtime flat even when the range is narrower than magic_samples.
     magics <- sample(magic_min:magic_max,

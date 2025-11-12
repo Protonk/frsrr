@@ -17,8 +17,8 @@ describe("frsr_bin", {
     expect_identical(unique(result$N_bins), 4L)
   })
 
-  it("supports weighted sampling", {
-    result <- frsr_bin(float_samples = 8, magic_samples = 8, weighted = TRUE)
+  it("accepts sampler overrides via dots", {
+    result <- frsr_bin(float_samples = 8, magic_samples = 8, method = "irrational")
     expect_s3_class(result, "data.frame")
     expect_true(all(is.finite(unlist(result))))
   })
@@ -98,6 +98,14 @@ describe("frsr_bin", {
 
     expect_equal(nrow(result), 3)
     expect_identical(unique(result$N_bins), 3L)
+  })
+
+  it("errors on unsupported sampler dots", {
+    expect_error(
+      frsr_bin(float_samples = 8, magic_samples = 8, bogus = TRUE),
+      "Unused arguments in `...`",
+      fixed = TRUE
+    )
   })
 
   it("is reproducible with matching seeds", {

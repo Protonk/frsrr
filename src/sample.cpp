@@ -96,7 +96,7 @@ inline float DrawSample(const Stratum& st) {
     return FromBits(bits);
 }
 
-NumericVector LogStratified(int n, double x_min, double x_max, bool weighted) {
+NumericVector LogStratified(int n, double x_min, double x_max) {
     if (n == 0) {
         return NumericVector(0);
     }
@@ -123,33 +123,11 @@ NumericVector LogStratified(int n, double x_min, double x_max, bool weighted) {
     RNGScope scope;
     NumericVector result(n);
 
-    if (!weighted) {
-        const std::size_t k = strata.size();
-        const std::size_t start = SampleOffset(static_cast<uint32_t>(k));
-        for (int i = 0; i < n; ++i) {
-            const Stratum& st = strata[(start + static_cast<std::size_t>(i)) % k];
-            result[i] = DrawSample(st);
-        }
-        return result;
-    }
-
-    std::vector<uint64_t> prefix(strata.size());
-    uint64_t total = 0;
-    for (std::size_t i = 0; i < strata.size(); ++i) {
-        total += strata[i].count;
-        prefix[i] = total;
-    }
-
+    const std::size_t k = strata.size();
+    const std::size_t start = SampleOffset(static_cast<uint32_t>(k));
     for (int i = 0; i < n; ++i) {
-        double u = unif_rand();
-        double scaled = u * static_cast<double>(total);
-        uint64_t target = static_cast<uint64_t>(scaled);
-        if (target >= total) {
-            target = total - 1;
-        }
-        auto it = std::lower_bound(prefix.begin(), prefix.end(), target + 1);
-        std::size_t idx = static_cast<std::size_t>(it - prefix.begin());
-        result[i] = DrawSample(strata[idx]);
+        const Stratum& st = strata[(start + static_cast<std::size_t>(i)) % k];
+        result[i] = DrawSample(st);
     }
     return result;
 }
@@ -193,7 +171,6 @@ NumericVector Uniform(int n, double x_min, double x_max) {
 NumericVector sample_inputs(int n,
                             double x_min,
                             double x_max,
-                            bool weighted,
                             const std::string& method) {
     if (n < 0) {
         throw std::invalid_argument("`n` must be non-negative");
@@ -206,10 +183,7 @@ NumericVector sample_inputs(int n,
     }
 
     if (method == "log_stratified") {
-        return sample_detail::LogStratified(n, x_min, x_max, weighted);
-    }
-    if (weighted) {
-        throw std::invalid_argument("`weighted = TRUE` is only supported for method = 'log_stratified'");
+        return sample_detail::LogStratified(n, x_min, x_max);
     }
     if (method == "irrational") {
         return sample_detail::IrrationalRotation(n, x_min, x_max);

@@ -7,7 +7,6 @@
 Rcpp::NumericVector sample_inputs(int n,
                                   double x_min,
                                   double x_max,
-                                  bool weighted,
                                   const std::string& method);
 
 #endif  // FRSR_SAMPLE_H

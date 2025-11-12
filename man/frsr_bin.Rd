@@ -15,8 +15,8 @@ frsr_bin(
   magic_samples = 2048,
   magic_min = 1596980000L,
   magic_max = 1598050000L,
-  weighted = FALSE,
-  threads = getOption("frsrr.threads", NA_integer_)
+  threads = getOption("frsrr.threads", NA_integer_),
+  ...
 )
 }
 \arguments{
@@ -44,14 +44,15 @@ Both `objective` and `dependent` accept: \code{"max_relative_error"},
 
 \item{magic_max}{Integer. The maximum magic constant to test (default: 1598050000).}
 
-\item{weighted}{Logical; if \code{TRUE}, weight the float sampler by the
-number of representable significands in each exponent stratum. Default is
-\code{FALSE}.}
-
 \item{threads}{Positive integer forwarded to \code{RcppParallel::setThreadOptions()}
 before running the parallel candidate search. Defaults to
 \code{getOption("frsrr.threads", NA)} which falls back to the package's
 compiled default thread count when unset.}
+
+\item{...}{Optional sampler arguments forwarded to the float sampler.
+Currently supports \code{method} (one of \code{"log_stratified"},
+\code{"irrational"}, or \code{"uniform"}). When omitted,
+\code{method = "log_stratified"}.}
 }
 \value{
 A data frame with columns:

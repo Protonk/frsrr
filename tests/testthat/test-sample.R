@@ -2,9 +2,6 @@ describe("frsr_sample", {
     it("returns correct number of samples", {
         result <- frsr_sample(4)
         expect_equal(nrow(result), 4)
-
-        weighted_result <- frsr_sample(4, weighted = TRUE)
-        expect_equal(nrow(weighted_result), 4)
     })
 
     it("forwards Newton arguments through to frsr", {
@@ -52,24 +49,16 @@ describe("frsr_sample", {
         expect_identical(first, second)
     })
 
-    it("rejects weighted samplers for non-log methods", {
-        expect_error(
-            frsr_sample(2, method = "uniform", weighted = TRUE),
-            "`weighted` can only be TRUE"
-        )
-    })
-
 })
 
 describe("sample_inputs", {
-    sample_call <- function(n, x_min, x_max, weighted = FALSE, method = "log_stratified") {
+    sample_call <- function(n, x_min, x_max, method = "log_stratified") {
         .Call(
             "_frsrr_sample_inputs",
             PACKAGE = "frsrr",
             as.integer(n),
             x_min,
             x_max,
-            weighted,
             method
         )
     }
@@ -79,7 +68,6 @@ describe("sample_inputs", {
         expect_error(sample_call(4, 1, 1), "`x_min` must be less than `x_max`")
         expect_error(sample_call(4, 0, 1, method = "log_stratified"), "must be > 0")
         expect_error(sample_call(4, 1, 2, method = "unknown"), "Unknown sampler method")
-        expect_error(sample_call(4, 1, 2, weighted = TRUE, method = "uniform"), "only supported")
     })
 
     it("keeps samples within range", {
@@ -92,17 +80,12 @@ describe("sample_inputs", {
     })
 
     it("is reproducible for stochastic samplers", {
-        specs <- list(
-            list(method = "log_stratified", weighted = FALSE),
-            list(method = "log_stratified", weighted = TRUE),
-            list(method = "irrational", weighted = FALSE),
-            list(method = "uniform", weighted = FALSE)
-        )
-        for (spec in specs) {
+        specs <- c("log_stratified", "irrational", "uniform")
+        for (method in specs) {
             set.seed(42)
-            first <- sample_call(32, 0.5, 2, weighted = spec$weighted, method = spec$method)
+            first <- sample_call(32, 0.5, 2, method = method)
             set.seed(42)
-            second <- sample_call(32, 0.5, 2, weighted = spec$weighted, method = spec$method)
+            second <- sample_call(32, 0.5, 2, method = method)
             expect_identical(first, second)
         }
     })

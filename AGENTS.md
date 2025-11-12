@@ -16,7 +16,7 @@ Agents map to the main workflows exposed in `R/`, `src/`, and `tests/testthat/`.
 ## Invocation
 
 - ComputeAgent: `R -q -e "pkgload::load_all('.'); print(frsrr::frsr(c(1,4,9,16), detail = TRUE, keep_params = TRUE))"` (repo root).
-- SamplerAgent: `R -q -e "pkgload::load_all('.'); set.seed(123); print(frsrr::frsr_sample(64, keep_params = TRUE, weighted = TRUE))"`.
+- SamplerAgent: `R -q -e "pkgload::load_all('.'); set.seed(123); print(frsrr::frsr_sample(64, keep_params = TRUE))"`.
 - BinSearchAgent: `R -q -e "pkgload::load_all('.'); print(frsrr::frsr_bin(n_bins = 4, float_samples = 1024, magic_samples = 2048, objective = 'max_relative_error', dependent = 'avg_relative_error'))"`.
 - PhaseAgent: `R -q -e "pkgload::load_all('.'); str(frsrr::frsr_phase(phases = 32L, exponents = -8L:8L, per_cell = 16L, magics = as.integer(seq(0x5f3750df, 0x5f3765df, by = 256L)), q = 0.95, NRmax = 0L))"`.
 - NRFormulaAgent: `R -q -e "pkgload::load_all('.'); custom <- quote(y * (1.6 - 0.6 * x * y^2)); print(frsrr::frsr_NR(c(1,4,9), formula = custom, NRmax = 4, tol = 1e-6))"`.
@@ -36,8 +36,8 @@ Agents map to the main workflows exposed in `R/`, `src/`, and `tests/testthat/`.
 ## I/O
 
 - ComputeAgent: inputs numeric `x > 0` plus optional per-element `magic`, `NRmax`, `A`, `B`, `tol`, `threads`; outputs either numeric vectors (`detail = FALSE`) or data frames with columns `input`, `initial`, `after_one`, `final`, `error`, `enre`, `diff`, `iters`, and optional parameter columns if `keep_params = TRUE`.
-- SamplerAgent: inputs `n`, float/magic bounds (`x_min`, `x_max`, `magic_min`, `magic_max`), `method`, `weighted`, and Newton args via `...`; outputs the same diagnostic schema as `frsr(detail = TRUE)` with reproducible samples.
-- BinSearchAgent: inputs scalar bounds, counts (`n_bins`, `float_samples`, `magic_samples`), metric names drawn from `{max_relative_error, avg_relative_error, rmse_relative_error}`, and optional `NRmax`, `weighted`, `threads`; outputs a data frame with `N_bins`, `Location`, `Range_Min`, `Range_Max`, `Magic`, `Objective`, `Dependent`.
+- SamplerAgent: inputs `n`, float/magic bounds (`x_min`, `x_max`, `magic_min`, `magic_max`), `method`, and Newton args via `...`; outputs the same diagnostic schema as `frsr(detail = TRUE)` with reproducible samples.
+- BinSearchAgent: inputs scalar bounds, counts (`n_bins`, `float_samples`, `magic_samples`), metric names drawn from `{max_relative_error, avg_relative_error, rmse_relative_error}`, and optional `NRmax`, `threads`; outputs a data frame with `N_bins`, `Location`, `Range_Min`, `Range_Max`, `Magic`, `Objective`, `Dependent`.
 - PhaseAgent: inputs integers (`phases`, `exponents`, `per_cell`, `NRmax`), candidate `magics`, and `q ∈ (0, 1]`; outputs a list containing the winning magic, scalar metrics `J` (max phase quantile) and `R` (phase roughness), a `phase_tbl` data frame with per-phase stats, and a `heat` matrix (rows = exponents, cols = phases).
 - NRFormulaAgent: inputs numeric `x`, optional `magic`, quoted `formula` using `y` and `x`, `NRmax ≥ 1`, `tol ≥ 0`; outputs data frames with `input`, `initial`, `final`, `error`, `converged`, `conv_rate`, `iters`.
 - PackageQAAgent: consumes repo metadata (`DESCRIPTION`, `NAMESPACE`, `R/`, `src/`, `man/`, `tests/`) and produces console logs, `frsrr_<version>.tar.gz`, `frsrr.Rcheck/`, and the standard `check.log`.
@@ -52,7 +52,7 @@ Agents map to the main workflows exposed in `R/`, `src/`, and `tests/testthat/`.
 
 ## Policies 
 
-- Documentation: never hand-edit `.Rd` files in `man/`; update the roxygen blocks and regenerate with `devtools::document(roclets = c('rd', 'collate', 'namespace'))`.
+- Documentation: never hand-edit `.Rd` files in `man/`; update the roxygen blocks and ask the user to regenerate with `devtools::document(roclets = c('rd', 'collate', 'namespace'))`. `devtools` may not be loaded in the Codex environment.
 - Keep the diagnostic focus: prefer sample sizes and bin grids that expose error structure before scaling to enormous workloads.
 - Preserve reproducibility by noting seeds, Newton parameters, and thread counts alongside any reported metrics.
 - Treat `threads` as advisory—omit or limit the value when running on shared machines to avoid oversubscription.
@@ -73,7 +73,11 @@ Agents map to the main workflows exposed in `R/`, `src/`, and `tests/testthat/`.
 - BinSearchAgent: produces `n_bins` rows with `Magic` inside the provided bounds and finite `Objective`/`Dependent` metrics for each bin.
 - PhaseAgent: outputs a list where `phase_tbl$n` equals `length(exponents) * per_cell` for all phases and the `heat` matrix dimensions match `length(exponents) × phases`.
 - NRFormulaAgent: respects `NRmax`, reports meaningful `conv_rate`, and marks `converged = TRUE` whenever a positive tolerance is satisfied before iterations expire.
-- PackageQAAgent: records a clean `testthat` run and, when executed, an `R CMD check` that finishes without unexpected errors or warnings.
+- PackageQAAgent: records a clean `testthat` run and, when executed
+
+## Documentation
+
+Documentation is generated in R projects by a build process. When the agent is asked to document a function or object, the user is always asking for structured documentation to be added to .R files. The agent is not responsible for the files in `/man`.
 
 ## Agent running notes
 

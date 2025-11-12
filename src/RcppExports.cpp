@@ -39,17 +39,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // sample_inputs
-NumericVector sample_inputs(int n, double x_min, double x_max, bool weighted, const std::string& method);
-RcppExport SEXP _frsrr_sample_inputs(SEXP nSEXP, SEXP x_minSEXP, SEXP x_maxSEXP, SEXP weightedSEXP, SEXP methodSEXP) {
+NumericVector sample_inputs(int n, double x_min, double x_max, const std::string& method);
+RcppExport SEXP _frsrr_sample_inputs(SEXP nSEXP, SEXP x_minSEXP, SEXP x_maxSEXP, SEXP methodSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
     Rcpp::traits::input_parameter< double >::type x_min(x_minSEXP);
     Rcpp::traits::input_parameter< double >::type x_max(x_maxSEXP);
-    Rcpp::traits::input_parameter< bool >::type weighted(weightedSEXP);
     Rcpp::traits::input_parameter< const std::string& >::type method(methodSEXP);
-    rcpp_result_gen = Rcpp::wrap(sample_inputs(n, x_min, x_max, weighted, method));
+    rcpp_result_gen = Rcpp::wrap(sample_inputs(n, x_min, x_max, method));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -72,7 +71,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_frsrr_frsr", (DL_FUNC) &_frsrr_frsr, 2},
     {"_frsrr_phase_orchestrator", (DL_FUNC) &_frsrr_phase_orchestrator, 6},
-    {"_frsrr_sample_inputs", (DL_FUNC) &_frsrr_sample_inputs, 5},
+    {"_frsrr_sample_inputs", (DL_FUNC) &_frsrr_sample_inputs, 4},
     {"_frsrr_search_optimal_constant", (DL_FUNC) &_frsrr_search_optimal_constant, 5},
     {NULL, NULL, 0}
 };

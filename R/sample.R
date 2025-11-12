@@ -2,6 +2,18 @@
 #' @importFrom Rcpp sourceCpp
 NULL
 
+.frsrr_sampler_methods <- c("log_stratified", "irrational", "uniform")
+
+.frsrr_draw_inputs <- function(n, x_min, x_max, method = "log_stratified") {
+    method <- match.arg(method, .frsrr_sampler_methods)
+
+    .Call(
+        '_frsrr_sample_inputs',
+        PACKAGE = 'frsrr',
+        n, x_min, x_max, method
+    )
+}
+
 #' Sample FRSR
 #'
 #' Generate samples for the Fast Reciprocal Square Root (FRSR) algorithm.
@@ -11,9 +23,6 @@ NULL
 #' @param magic_max Maximum value for the magic number range. Default is \code{1598050000L}
 #' @param x_min Minimum value for the input range (must be > 0). Default is \code{0.25}
 #' @param x_max Maximum value for the input range (must exceed \code{x_min}). Default is \code{1.0}
-#' @param weighted Logical; if \code{TRUE}, weight the sampler by the number of
-#'   admissible significands in each exponent stratum. Only applicable when
-#'   \code{method = "log_stratified"}. Default is \code{FALSE}.
 #' @param method Character scalar selecting the sampler. Options are
 #'   \code{"irrational"}, \code{"uniform"}, or
 #'   \code{"log_stratified"} (the legacy default).
@@ -30,7 +39,6 @@ NULL
 #' \code{[x_min, x_max]}:
 #' \itemize{
 #'   \item{\strong{Log-stratified}:} Sample floats uniformly across exponent strata
-#'     (optionally weighted by the number of representable significands per stratum).
 #'     This method is the default and covers the FP subset of the reals well.
 #'   \item{\strong{Irrational rotation}:} Step through \code{[0, 1)} via the golden
 #'     ratio increment and rescale. This method provides low-discrepancy coverage
@@ -90,18 +98,12 @@ NULL
 frsr_sample <- function(n,
                         magic_min = 1596980000L, magic_max = 1598050000L,
                         x_min = 0.25, x_max = 1.0,
-                        weighted = FALSE,
                         method = c("log_stratified", "irrational", "uniform"),
                         ...) {
     method <- match.arg(method)
     n <- as.integer(n)[1]
     if (is.na(n) || n < 0L) {
         stop("`n` must be a non-negative scalar")
-    }
-    # truthify to safely pass to cpp
-    weighted <- isTRUE(weighted)
-    if (weighted && method != "log_stratified") {
-        stop("`weighted` can only be TRUE when method = 'log_stratified'")
     }
 
     # bounds check hopefully adds to readability
@@ -141,10 +143,12 @@ frsr_sample <- function(n,
     } else if (is.null(x_max)) {
         rep(x_min, n)  # Use x_min if x_max is NULL
     } else {
-        # Delegate to the C++ sampler (which handles method-specific scaling)
-        .Call('_frsrr_sample_inputs',
-              PACKAGE = 'frsrr',
-              n, x_min, x_max, weighted, method)
+        .frsrr_draw_inputs(
+            n = n,
+            x_min = x_min,
+            x_max = x_max,
+            method = method
+        )
     }
     # Call frsr with generated inputs and parameters
     # detail = TRUE keeps diagnostics users typically want
