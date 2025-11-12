@@ -51,77 +51,68 @@ describe("frsr_sample", {
         second <- frsr_sample(6, keep_params = TRUE)
         expect_identical(first, second)
     })
+
+    it("rejects weighted samplers for non-log methods", {
+        expect_error(
+            frsr_sample(2, method = "uniform", weighted = TRUE),
+            "`weighted` can only be TRUE"
+        )
+    })
+
+    it("honors midpoint sampling", {
+        result <- frsr_sample(4, x_min = 1, x_max = 5, method = "midpoint")
+        expect_equal(result$input, c(1.5, 2.5, 3.5, 4.5))
+    })
 })
 
-describe("bounded_stratified_sample", {
-    it("handles narrow exponent ranges", {
-        low <- log2(0.75)
-        high <- log2(1)
-
-        samples <- .Call(
-            "_frsrr_bounded_stratified_sample",
+describe("sample_inputs", {
+    sample_call <- function(n, x_min, x_max, weighted = FALSE, method = "log_stratified") {
+        .Call(
+            "_frsrr_sample_inputs",
             PACKAGE = "frsrr",
-            32L,
-            low,
-            high,
-            FALSE
+            as.integer(n),
+            x_min,
+            x_max,
+            weighted,
+            method
         )
+    }
 
-        expect_length(samples, 32)
-        expect_true(all(is.finite(samples)))
-        expect_true(all(samples >= 0.75))
-        expect_true(all(samples < 1))
+    it("validates inputs", {
+        expect_error(sample_call(-1, 0.25, 1), "`n` must be non-negative")
+        expect_error(sample_call(4, 1, 1), "`x_min` must be less than `x_max`")
+        expect_error(sample_call(4, 0, 1, method = "log_stratified"), "must be > 0")
+        expect_error(sample_call(4, 1, 2, method = "unknown"), "Unknown sampler method")
+        expect_error(sample_call(4, 1, 2, weighted = TRUE, method = "uniform"), "only supported")
     })
 
-    it("tolerates zero bit draws", {
-        samples <- .Call(
-            "_frsrr_bounded_stratified_sample",
-            PACKAGE = "frsrr",
-            1024L,
-            log2(0.25),
-            log2(0.5),
-            FALSE
-        )
-
-        expect_length(samples, 1024)
-        expect_true(all(is.finite(samples)))
+    it("generates midpoint grids deterministically", {
+        samples <- sample_call(4, 1, 5, method = "midpoint")
+        expect_equal(samples, c(1.5, 2.5, 3.5, 4.5))
     })
 
-    it("supports weighted sampling", {
-        samples <- .Call(
-            "_frsrr_bounded_stratified_sample",
-            PACKAGE = "frsrr",
-            64L,
-            log2(0.5),
-            log2(2),
-            TRUE
-        )
-
-        expect_length(samples, 64)
-        expect_true(all(is.finite(samples)))
-        expect_true(all(samples >= 0.5))
-        expect_true(all(samples < 2))
+    it("keeps samples within range", {
+        methods <- c("log_stratified", "irrational", "uniform")
+        for (method in methods) {
+            draws <- sample_call(64, 0.25, 1, method = method)
+            expect_true(all(draws >= 0.25))
+            expect_true(all(draws <= 1))
+        }
     })
 
-    it("is reproducible when seed is set", {
-        set.seed(42)
-        first <- .Call(
-            "_frsrr_bounded_stratified_sample",
-            PACKAGE = "frsrr",
-            32L,
-            log2(0.5),
-            log2(2),
-            TRUE
+    it("is reproducible for stochastic samplers", {
+        specs <- list(
+            list(method = "log_stratified", weighted = FALSE),
+            list(method = "log_stratified", weighted = TRUE),
+            list(method = "irrational", weighted = FALSE),
+            list(method = "uniform", weighted = FALSE)
         )
-        set.seed(42)
-        second <- .Call(
-            "_frsrr_bounded_stratified_sample",
-            PACKAGE = "frsrr",
-            32L,
-            log2(0.5),
-            log2(2),
-            TRUE
-        )
-        expect_identical(first, second)
+        for (spec in specs) {
+            set.seed(42)
+            first <- sample_call(32, 0.5, 2, weighted = spec$weighted, method = spec$method)
+            set.seed(42)
+            second <- sample_call(32, 0.5, 2, weighted = spec$weighted, method = spec$method)
+            expect_identical(first, second)
+        }
     })
 })

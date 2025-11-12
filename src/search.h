@@ -4,7 +4,6 @@
 #include <Rcpp.h>
 #include <string>
 
-Rcpp::NumericVector bounded_stratified_sample(int n, double low, double high, bool weighted = false);
 Rcpp::DataFrame search_optimal_constant(Rcpp::NumericVector floats,
                                         Rcpp::IntegerVector magics,
                                         int NRmax = 0,

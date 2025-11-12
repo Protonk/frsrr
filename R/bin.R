@@ -121,10 +121,9 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
   bins <- lapply(seq_len(n_bins), function(i) {
     bin_min <- bin_edges[i]
     bin_max <- bin_edges[i + 1]
-    # Pass exponent bounds because the sampler stratifies floats by log2 exponent range
-    floats <- .Call('_frsrr_bounded_stratified_sample',
+    floats <- .Call('_frsrr_sample_inputs',
                     PACKAGE = 'frsrr',
-                    float_samples, log2(bin_min), log2(bin_max), weighted)
+                    float_samples, bin_min, bin_max, weighted, "log_stratified")
     # Magic constants are explored via simple sampling; drawing with replacement
     # keeps the runtime flat even when the range is narrower than magic_samples.
     magics <- sample(magic_min:magic_max,

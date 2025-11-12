@@ -38,17 +38,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// bounded_stratified_sample
-NumericVector bounded_stratified_sample(int n, double low, double high, bool weighted);
-RcppExport SEXP _frsrr_bounded_stratified_sample(SEXP nSEXP, SEXP lowSEXP, SEXP highSEXP, SEXP weightedSEXP) {
+// sample_inputs
+NumericVector sample_inputs(int n, double x_min, double x_max, bool weighted, const std::string& method);
+RcppExport SEXP _frsrr_sample_inputs(SEXP nSEXP, SEXP x_minSEXP, SEXP x_maxSEXP, SEXP weightedSEXP, SEXP methodSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
-    Rcpp::traits::input_parameter< double >::type low(lowSEXP);
-    Rcpp::traits::input_parameter< double >::type high(highSEXP);
+    Rcpp::traits::input_parameter< double >::type x_min(x_minSEXP);
+    Rcpp::traits::input_parameter< double >::type x_max(x_maxSEXP);
     Rcpp::traits::input_parameter< bool >::type weighted(weightedSEXP);
-    rcpp_result_gen = Rcpp::wrap(bounded_stratified_sample(n, low, high, weighted));
+    Rcpp::traits::input_parameter< const std::string& >::type method(methodSEXP);
+    rcpp_result_gen = Rcpp::wrap(sample_inputs(n, x_min, x_max, weighted, method));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -71,7 +72,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_frsrr_frsr", (DL_FUNC) &_frsrr_frsr, 2},
     {"_frsrr_phase_orchestrator", (DL_FUNC) &_frsrr_phase_orchestrator, 6},
-    {"_frsrr_bounded_stratified_sample", (DL_FUNC) &_frsrr_bounded_stratified_sample, 4},
+    {"_frsrr_sample_inputs", (DL_FUNC) &_frsrr_sample_inputs, 5},
     {"_frsrr_search_optimal_constant", (DL_FUNC) &_frsrr_search_optimal_constant, 5},
     {NULL, NULL, 0}
 };

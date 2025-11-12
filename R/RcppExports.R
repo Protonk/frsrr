@@ -9,8 +9,8 @@ phase_orchestrator <- function(phases, exponents, per_cell, magics, q, NRmax) {
     .Call(`_frsrr_phase_orchestrator`, phases, exponents, per_cell, magics, q, NRmax)
 }
 
-bounded_stratified_sample <- function(n, low, high, weighted) {
-    .Call(`_frsrr_bounded_stratified_sample`, n, low, high, weighted)
+sample_inputs <- function(n, x_min, x_max, weighted, method) {
+    .Call(`_frsrr_sample_inputs`, n, x_min, x_max, weighted, method)
 }
 
 search_optimal_constant <- function(floats, magics, NRmax, objective_metric, dependent_metric) {
