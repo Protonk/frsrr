@@ -88,4 +88,4 @@ kable(bins, format = "simple")
 
 ## Our friends the robots
 
-This project was built with the paid assistance of two AI agents, Perplexity AI and OpenAI's Codex. Perplexity AI was used until version `0.8.9`. Codex assisted with later development, including the shared sampler bridge between `frsr_sample()`/`frsr_bin()`, expanded sampler overrides, and removal of the deprecated weighted paths.
+This project was built with the paid assistance of two AI agents, [Perplexity AI](https://www.perplexity.ai/) and [OpenAI's Codex](https://chatgpt.com/codex). Perplexity AI was used until version `0.8.9`. Codex assisted with later development, including a large refactoring guaranteed by testing. 

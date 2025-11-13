@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+.Rbuildignore
 .DS_Store
 frsrr.Rproj
 .vscode/settings.json
