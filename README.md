@@ -17,6 +17,12 @@ I like R! R doesn't have a type for 32 bit floats, so I wanted a way to mess wit
 - Ability to run the frsr with a custom iteration formula, specified in R formula syntax
 - Bin input range and compute optimal magic constants for each bin, if efficiency really isn't your thing.
 
+## FISR or FRSR?
+
+When the FRSR became famous (and only then), it was referred to as an inverse, meaning "[multiplicative inverse](https://en.wikipedia.org/wiki/Multiplicative_inverse)". 
+
+By contrast, in both the original source of Quake's FRSR tucked away in [a math library since 1986](https://www.netlib.org/fdlibm/e_sqrt.c) and one of the first software libraries ever written--due to Alan Turing, D.G. Prinz, and Cecily Poppelwell--1/sqrt(x) is the "[reciproot](https://0x5f37642f.com/documents/ManchesterRecipRoot.pdf)". Mike Day also argues for the name FRSR in his [2023 generalization of the FRSR](https://arxiv.org/abs/2307.15600) to support any rational power or precision of base. Fame has an interia all its own, so we shall see which name prevails.
+
 ## Installation
 
 Install the package from GitHub using the `devtools` package:
@@ -80,12 +86,6 @@ kable(bins, format = "simple")
 - Sampling helpers never touch `unif_rand()` from worker threads; instead, the main R thread prepares any random inputs and the parallel code only performs pure numeric transforms. This keeps the results independent of thread scheduling.
 - The test suite pins a seed, runs the stochastic helpers twice, and checks for bitwise identical results so regressions in RNG wiring are caught automatically.
 
-## FISR or FRSR?
-
-When the FRSR became famous (and only then), it was referred to as an inverse, meaning "[multiplicative inverse](https://en.wikipedia.org/wiki/Multiplicative_inverse)". 
-
-By contrast, in both the original source of Quake's FRSR tucked away in [a math library since 1986](https://www.netlib.org/fdlibm/e_sqrt.c) and one of the first software libraries ever written--due to Alan Turing, D.G. Prinz, and Cecily Poppelwell--1/sqrt(x) is the "[reciproot](https://0x5f37642f.com/documents/ManchesterRecipRoot.pdf)". Mike Day also argues for the name FRSR in his [2023 generalization of the FRSR](https://arxiv.org/abs/2307.15600) to support any rational power or precision of base. Fame has an interia all its own, so we shall see which name prevails.
-
 ## Our friends the robots
 
-This project was built with the (paid) assistance of an AI tool, [Perplexity AI](https://www.perplexity.ai/). The AI assisted with writing code, understanding the R package development process, and writing C++ code (which is a language I've never written in). 
+This project was built with the paid assistance of two AI agents, Perplexity AI and OpenAI's Codex. Perplexity AI was used until version `0.8.9`. Codex assisted with later development, including the shared sampler bridge between `frsr_sample()`/`frsr_bin()`, expanded sampler overrides, and removal of the deprecated weighted paths.
