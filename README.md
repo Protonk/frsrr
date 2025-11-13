@@ -89,3 +89,15 @@ kable(bins, format = "simple")
 ## Our friends the robots
 
 This project was built with the paid assistance of two AI agents, [Perplexity AI](https://www.perplexity.ai/) and [OpenAI's Codex](https://chatgpt.com/codex). Perplexity AI was used until version `0.8.9`. Codex assisted with later development, including a large refactoring guaranteed by testing. 
+
+## License
+
+This software is released under a variant of the MIT license. Copyright claims have been made on various versions of the FRSR, including [an attempt to sue Microsoft over Copilot's regurgitation of the code](https://www.saverilawfirm.com/our-cases/github-copilot-intellectual-property-litigation?utm_source=chatgpt.com). All are likely to fail or have failed. License text follows:
+
+Permission to use, copy, modify, distribute, and sell this software and its
+documentation for any purpose is hereby granted without fee, provided that
+the above copyright notice appear in all copies and that both that
+copyright notice and this permission notice appear in supporting
+documentation.  No representations are made about the suitability of this
+software for any purpose.  It is provided "as is" without express or
+implied warranty.
