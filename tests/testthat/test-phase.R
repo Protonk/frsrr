@@ -54,4 +54,47 @@ describe("frsr_phase", {
     second <- do.call(frsr_phase, args)
     expect_identical(first, second)
   })
+
+  it("validates arguments before invoking C++ helpers", {
+    expect_error(
+      frsr_phase(phases = 0L),
+      "`phases` must be a positive integer",
+      fixed = TRUE
+    )
+    expect_error(
+      frsr_phase(exponents = integer()),
+      "`exponents` must contain at least one value",
+      fixed = TRUE
+    )
+    expect_error(
+      frsr_phase(exponents = 200L),
+      "`exponents` must stay within [-126, 127]",
+      fixed = TRUE
+    )
+    expect_error(
+      frsr_phase(per_cell = 0L),
+      "`per_cell` must be a positive integer",
+      fixed = TRUE
+    )
+    expect_error(
+      frsr_phase(magics = integer()),
+      "`magics` must supply at least one integer constant",
+      fixed = TRUE
+    )
+    expect_error(
+      frsr_phase(q = 0),
+      "`q` must satisfy 0 < q <= 1",
+      fixed = TRUE
+    )
+    expect_error(
+      frsr_phase(q = 2),
+      "`q` must satisfy 0 < q <= 1",
+      fixed = TRUE
+    )
+    expect_error(
+      frsr_phase(NRmax = -1L),
+      "`NRmax` must be a non-negative integer",
+      fixed = TRUE
+    )
+  })
 })

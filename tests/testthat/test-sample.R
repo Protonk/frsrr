@@ -4,6 +4,39 @@ describe("frsr_sample", {
         expect_equal(nrow(result), 4)
     })
 
+    it("validates scalar arguments up front", {
+        expect_error(
+            frsr_sample(-1),
+            "`n` must be a non-negative scalar",
+            fixed = TRUE
+        )
+        expect_error(
+            frsr_sample(NA_integer_),
+            "`n` must be a non-negative scalar",
+            fixed = TRUE
+        )
+        expect_error(
+            frsr_sample(1, x_min = 0),
+            "`x_min` must be greater than 0",
+            fixed = TRUE
+        )
+        expect_error(
+            frsr_sample(1, x_max = 0),
+            "`x_max` must be greater than 0",
+            fixed = TRUE
+        )
+        expect_error(
+            frsr_sample(1, x_min = Inf),
+            "`x_min` must be finite when provided",
+            fixed = TRUE
+        )
+        expect_error(
+            frsr_sample(1, x_min = 1, x_max = 0.5),
+            "`x_min` must be less than `x_max` when both are supplied",
+            fixed = TRUE
+        )
+    })
+
     it("forwards Newton arguments through to frsr", {
         result <- frsr_sample(5, NRmax = 2)
         expect_identical(unique(result$iters), 2L)

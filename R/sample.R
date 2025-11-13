@@ -2,8 +2,24 @@
 #' @importFrom Rcpp sourceCpp
 NULL
 
+# Sampler identifiers understood by the C++ draw helper.
 .frsrr_sampler_methods <- c("log_stratified", "irrational", "uniform")
 
+#' Internal wrapper around `_frsrr_sample_inputs`.
+#'
+#' Draws `n` floating-point samples inside `[x_min, x_max]` using one of the
+#' supported sampling strategies. Keeping this helper in R makes argument
+#' validation explicit before control passes to the parallel C++ workers.
+#'
+#' @param n Non-negative integer number of draws.
+#' @param x_min,x_max Closed interval bounds (must satisfy `0 < x_min < x_max`).
+#' @param method Character scalar naming the sampler (see `.frsrr_sampler_methods`).
+#'
+#' @return
+#' A numeric vector of length `n` whose values lie within `[x_min, x_max]`.
+#'
+#' @keywords internal
+#' @noRd
 .frsrr_draw_inputs <- function(n, x_min, x_max, method = "log_stratified") {
     method <- match.arg(method, .frsrr_sampler_methods)
 

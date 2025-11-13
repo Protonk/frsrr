@@ -53,11 +53,40 @@ frsr_phase <- function(phases = 128L,
                        q = 0.95,
                        NRmax = 0L) {
   phases <- as.integer(phases)[1]
+  if (is.na(phases) || phases < 1L) {
+    stop("`phases` must be a positive integer", call. = FALSE)
+  }
+
   exponents <- as.integer(exponents)
+  if (!length(exponents)) {
+    stop("`exponents` must contain at least one value", call. = FALSE)
+  }
+  if (any(!is.finite(exponents))) {
+    stop("`exponents` must be finite integers", call. = FALSE)
+  }
+  if (any(exponents < -126L | exponents > 127L)) {
+    stop("`exponents` must stay within [-126, 127]", call. = FALSE)
+  }
+
   per_cell <- as.integer(per_cell)[1]
+  if (is.na(per_cell) || per_cell < 1L) {
+    stop("`per_cell` must be a positive integer", call. = FALSE)
+  }
+
   magics <- as.integer(magics)
+  if (!length(magics) || any(is.na(magics))) {
+    stop("`magics` must supply at least one integer constant", call. = FALSE)
+  }
+
   q <- as.numeric(q)[1]
+  if (!is.finite(q) || q <= 0 || q > 1) {
+    stop("`q` must satisfy 0 < q <= 1", call. = FALSE)
+  }
+
   NRmax <- as.integer(NRmax)[1]
+  if (is.na(NRmax) || NRmax < 0L) {
+    stop("`NRmax` must be a non-negative integer", call. = FALSE)
+  }
 
   # Keep conversion/validation in R so the hot C++ path can assume scalars,
   # which avoids repeatedly checking lengths inside the tight sampling loops.
