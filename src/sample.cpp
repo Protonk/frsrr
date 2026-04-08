@@ -165,6 +165,61 @@ NumericVector Uniform(int n, double x_min, double x_max) {
     return Rcpp::runif(n, x_min, x_max);
 }
 
+// Uniform draws over the 24 significand+parity bits of a single canonical
+// binade pair [2^e0, 2^(e0+2)) that lies inside [x_min, x_max].
+//
+// Why a binade pair? The FRSR's initial-approximation relative error is
+// periodic with period 2 in log2(x): the curve over [1, 2) and [2, 4) together
+// tiles every other pair of binades exactly. So drawing mantissas uniformly
+// across one pair is enough to visit every distinct error value the algorithm
+// can produce, and sweeping n upward converges toward the true error surface
+// instead of the distribution of a log or uniform sampler.
+NumericVector MantissaUniform(int n, double x_min, double x_max) {
+    if (n == 0) {
+        return NumericVector(0);
+    }
+    if (x_min <= 0.0 || x_max <= 0.0) {
+        throw std::invalid_argument(
+            "`x_min` and `x_max` must be > 0 for mantissa-uniform sampling");
+    }
+
+    // Pick the smallest integer exponent e0 such that 2^e0 >= x_min, then
+    // verify the full pair [2^e0, 2^(e0+2)) fits inside [x_min, x_max].
+    // ilogb gives floor(log2(x_min)); bump to the ceiling when 2^e0 < x_min.
+    int e0 = std::ilogb(x_min);
+    if (std::ldexp(1.0, e0) < x_min) {
+        ++e0;
+    }
+    if (e0 < -126 || e0 + 1 > 127) {
+        throw std::invalid_argument(
+            "mantissa-uniform sampler requires a binade pair inside the "
+            "float32 normal range");
+    }
+    if (std::ldexp(1.0, e0 + 2) > x_max) {
+        throw std::invalid_argument(
+            "mantissa-uniform sampler requires a full binade pair inside "
+            "[x_min, x_max]; need x_max >= 4 * (next power of two >= x_min)");
+    }
+
+    RNGScope scope;
+    NumericVector result(n);
+    constexpr uint32_t kSigCount = 1u << 23;
+    constexpr uint32_t kPairCount = kSigCount << 1;  // 2^24 floats per pair
+
+    for (int i = 0; i < n; ++i) {
+        // Top bit picks which binade inside the pair; the remaining 23 bits
+        // are the IEEE-754 mantissa. The result is a uniform draw over every
+        // representable float in [2^e0, 2^(e0+2)).
+        uint32_t draw = SampleOffset(kPairCount);
+        int binade = static_cast<int>(draw >> 23);
+        uint32_t significand = draw & (kSigCount - 1u);
+        uint32_t bits = (static_cast<uint32_t>(e0 + binade + 127) << 23)
+                        | significand;
+        result[i] = static_cast<double>(FromBits(bits));
+    }
+    return result;
+}
+
 }  // namespace sample_detail
 
 // [[Rcpp::export]]
@@ -190,6 +245,9 @@ NumericVector sample_inputs(int n,
     }
     if (method == "uniform") {
         return sample_detail::Uniform(n, x_min, x_max);
+    }
+    if (method == "mantissa_uniform") {
+        return sample_detail::MantissaUniform(n, x_min, x_max);
     }
 
     std::string message = "Unknown sampler method: ";

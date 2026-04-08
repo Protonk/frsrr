@@ -3,7 +3,7 @@
 NULL
 
 # Sampler identifiers understood by the C++ draw helper.
-.frsrr_sampler_methods <- c("log_stratified", "irrational", "uniform")
+.frsrr_sampler_methods <- c("log_stratified", "irrational", "uniform", "mantissa_uniform")
 
 #' Internal wrapper around `_frsrr_sample_inputs`.
 #'
@@ -40,7 +40,7 @@ NULL
 #' @param x_min Minimum value for the input range (must be > 0). Default is \code{0.25}
 #' @param x_max Maximum value for the input range (must exceed \code{x_min}). Default is \code{1.0}
 #' @param method Character scalar selecting the sampler. Options are
-#'   \code{"irrational"}, \code{"uniform"}, or
+#'   \code{"irrational"}, \code{"uniform"}, \code{"mantissa_uniform"}, or
 #'   \code{"log_stratified"} (the legacy default).
 #' @param ... Additional arguments passed to \code{frsr}.
 #'
@@ -51,7 +51,7 @@ NULL
 #' numbers much higher or lower requiring more iterations to converge or
 #' not converging at all.
 #'
-#' Three sampler modes explore different coverage patterns over
+#' Four sampler modes explore different coverage patterns over
 #' \code{[x_min, x_max]}:
 #' \itemize{
 #'   \item{\strong{Log-stratified}:} Sample floats uniformly across exponent strata
@@ -61,6 +61,15 @@ NULL
 #'     of the unit interval.
 #'   \item{\strong{Uniform}:} Draw from the standard R uniform sampler and rescale.
 #'    Takes longer to smooth out than irrational rotation.
+#'   \item{\strong{Mantissa-uniform (binade pair)}:} Draw uniformly over every
+#'    representable float inside a single canonical binade pair
+#'    \eqn{[2^{e_0}, 2^{e_0 + 2})} that fits inside \code{[x_min, x_max]}.
+#'    \eqn{e_0} is chosen as the smallest integer with \eqn{2^{e_0} \ge x_{\min}},
+#'    so draws concentrate at the low end of the requested range regardless of
+#'    how large \code{x_max} is. Because the FRSR's initial-approximation
+#'    relative error is periodic with period 2 in \eqn{\log_2 x}, one binade
+#'    pair sees every distinct error value the algorithm can produce. Requires
+#'    that pair to fit: effectively \code{x_max >= 4 * (next power of two >= x_min)}.
 #' }
 #'
 #' @return
@@ -114,7 +123,8 @@ NULL
 frsr_sample <- function(n,
                         magic_min = 1596980000L, magic_max = 1598050000L,
                         x_min = 0.25, x_max = 1.0,
-                        method = c("log_stratified", "irrational", "uniform"),
+                        method = c("log_stratified", "irrational",
+                                   "uniform", "mantissa_uniform"),
                         ...) {
     method <- match.arg(method)
     n <- as.integer(n)[1]

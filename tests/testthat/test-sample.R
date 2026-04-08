@@ -104,7 +104,7 @@ describe("sample_inputs", {
     })
 
     it("keeps samples within range", {
-        methods <- c("log_stratified", "irrational", "uniform")
+        methods <- c("log_stratified", "irrational", "uniform", "mantissa_uniform")
         for (method in methods) {
             draws <- sample_call(64, 0.25, 1, method = method)
             expect_true(all(draws >= 0.25))
@@ -113,7 +113,7 @@ describe("sample_inputs", {
     })
 
     it("is reproducible for stochastic samplers", {
-        specs <- c("log_stratified", "irrational", "uniform")
+        specs <- c("log_stratified", "irrational", "uniform", "mantissa_uniform")
         for (method in specs) {
             set.seed(42)
             first <- sample_call(32, 0.5, 2, method = method)
@@ -121,5 +121,38 @@ describe("sample_inputs", {
             second <- sample_call(32, 0.5, 2, method = method)
             expect_identical(first, second)
         }
+    })
+
+    it("mantissa_uniform stays inside the canonical binade pair", {
+        # [0.25, 1.0] is exactly one binade pair: [2^-2, 2^0).
+        set.seed(7)
+        draws <- sample_call(4096, 0.25, 1, method = "mantissa_uniform")
+        expect_true(all(draws >= 0.25))
+        expect_true(all(draws < 1))
+        # With enough draws we should visit both binades inside the pair,
+        # confirming we aren't accidentally restricted to half the range.
+        expect_true(any(draws < 0.5))
+        expect_true(any(draws >= 0.5))
+    })
+
+    it("mantissa_uniform ignores extra range beyond the chosen pair", {
+        # Range spans more than a single pair: e0 = -2 gives the pair
+        # [0.25, 1.0). Draws must still all live below 1.0 even though the
+        # range reaches 16.
+        set.seed(11)
+        draws <- sample_call(1024, 0.25, 16, method = "mantissa_uniform")
+        expect_true(all(draws >= 0.25))
+        expect_true(all(draws < 1))
+    })
+
+    it("mantissa_uniform rejects ranges narrower than a binade pair", {
+        expect_error(
+            sample_call(8, 0.3, 1.0, method = "mantissa_uniform"),
+            "binade pair"
+        )
+        expect_error(
+            sample_call(8, 1.0, 2.0, method = "mantissa_uniform"),
+            "binade pair"
+        )
     })
 })
