@@ -98,3 +98,54 @@ describe("frsr_phase", {
     )
   })
 })
+
+test_that('phase comparisons reuse each candidate experiment across candidate changes', {
+    args <- list(phases = 6, exponents = -2:2, per_cell = 8, NRmax = 1, q = 0.8)
+    magics <- as.integer(c(0x5f3759df, 0x5f375a86, 0x5f100000))
+    run <- function(m) {
+        set.seed(2024)
+        do.call(frsr_phase, c(args, list(magics = m)))
+    }
+    individual <- lapply(magics, run)
+    best <- order(vapply(individual, `[[`, 0, 'J'),
+                  vapply(individual, `[[`, 0, 'R'), magics)[1]
+    fit <- run(magics)
+    fields <- c('magic', 'J', 'R', 'phase_tbl', 'heat')
+    expect_identical(fit[fields], individual[[best]][fields])
+    expect_identical(fit, run(rev(magics)))
+    expect_identical(fit[fields], run(c(0L, magics))[fields])
+    expect_identical(fit[fields], run(c(magics, magics))[fields])
+    expect_identical(fit$settings$NRmax, 1L)
+    expect_identical(fit$settings$magics, sort(magics))
+})
+
+test_that('phase statistics agree with independently reconstructed draws and evaluation', {
+    set.seed(41)
+    x <- float32(2^runif(64))
+    fit <- frsr(x, NRmax = 2, tol = 0, threads = 1, detail = TRUE)
+    signed <- (fit$final - 1 / sqrt(x)) / (1 / sqrt(x))
+    set.seed(41)
+    phase <- frsr_phase(phases = 1, exponents = 0, per_cell = 64,
+                        magics = 0x5f3759df, q = 0.9, NRmax = 2)
+    expect_equal(phase$J, unname(quantile(abs(signed), 0.9)), tolerance = 1e-15)
+    expect_equal(phase$phase_tbl$mean_signed, mean(signed), tolerance = 1e-15)
+    expect_identical(phase$phase_tbl$median_signed, median(signed))
+    expect_identical(unname(phase$heat[1, 1]), median(signed))
+})
+
+test_that('phase ties are exact and normal exponent extremes remain supported', {
+    ties <- as.integer(c(0x20000001, 0x20000000))
+    set.seed(9)
+    fit <- frsr_phase(phases = 1, exponents = 0, per_cell = 4,
+                      magics = ties, NRmax = 1)
+    set.seed(9)
+    other <- frsr_phase(phases = 1, exponents = 0, per_cell = 4,
+                        magics = rev(ties), NRmax = 1)
+    expect_identical(fit, other)
+    expect_identical(fit$magic, min(ties))
+    set.seed(9)
+    edge <- frsr_phase(phases = 4, exponents = c(-126, 127), per_cell = 32,
+                       magics = 0x5f3759df, NRmax = 2)
+    expect_true(is.finite(edge$J))
+    expect_true(all(is.finite(edge$heat)))
+})

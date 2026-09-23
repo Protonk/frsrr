@@ -143,35 +143,47 @@ List phase_orchestrator(int phases,
 
     const double phase_width = 1.0 / static_cast<double>(phases);
 
+    // Draw once on the main thread. Every candidate sees the same grid, including
+    // when candidates are permuted, duplicated or inserted into the call.
+    std::vector<float> samples(total_samples);
+    std::vector<double> references(total_samples);
+    std::size_t draw = 0;
+    for (int exponent : exponent_values) {
+        checkUserInterrupt();
+        const double largest = std::ldexp(2.0 - std::ldexp(1.0, -23), exponent);
+        for (int phase = 0; phase < phases; ++phase) {
+            for (int i = 0; i < per_cell; ++i) {
+                const double frac = (static_cast<double>(phase) + unif_rand()) * phase_width;
+                // Rounding near the top of an exponent slab can cross its boundary
+                // (or overflow at exponent 127); clamp to that slab's last float.
+                const double x = std::min(std::ldexp(std::exp2(frac), exponent), largest);
+                samples[draw] = frsr_detail::CheckedInput(x);
+                references[draw] = frsr_detail::Reference(samples[draw]);
+                ++draw;
+            }
+        }
+    }
+
     for (int magic_idx = 0; magic_idx < static_cast<int>(magic_values.size()); ++magic_idx) {
         checkUserInterrupt();
 
         const int magic = magic_values[magic_idx];
+        bool feasible = true;
+        std::size_t sample_position = 0;
         // Reset per-phase accumulators before reusing the buffers.
         std::fill(phase_sum.begin(), phase_sum.end(), 0.0);
         std::fill(offsets.begin(), offsets.end(), 0u);
 
-        for (int exp_idx = 0; exp_idx < num_exponents; ++exp_idx) {
-            const int exponent = exponent_values[exp_idx];
-
+        for (int exp_idx = 0; exp_idx < num_exponents && feasible; ++exp_idx) {
             for (int phase_idx = 0; phase_idx < phases; ++phase_idx) {
-                const double phase_low = static_cast<double>(phase_idx) * phase_width;
-                const double phase_high = phase_low + phase_width;
-
                 for (int sample_idx = 0; sample_idx < per_cell; ++sample_idx) {
-                    // Pick a mantissa inside the current phase slab to keep coverage uniform.
-                    double u = unif_rand();
-                    double frac = phase_low + u * (phase_high - phase_low);
-                    if (frac >= 1.0) {
-                        frac = std::nextafter(1.0, 0.0);
-                    }
-                    // Mantissa rebuild keeps the sample inside the desired phase
-                    // slice while std::ldexp reattaches the exponent under test.
-                    const double mantissa = std::exp2(frac);
-                    const double x_val = std::ldexp(mantissa, exponent);
-                    const float xf = static_cast<float>(x_val);
+                    const float xf = samples[sample_position];
+                    const double exact = references[sample_position++];
                     const float approx = frsr0(xf, static_cast<uint32_t>(magic), NRmax);
-                    const double exact = 1.0 / std::sqrt(static_cast<double>(xf));
+                    if (!std::isfinite(approx)) {
+                        feasible = false;
+                        break;
+                    }
                     const double epsilon = (static_cast<double>(approx) - exact) / exact;
                     const double abs_eps = std::abs(epsilon);
 
@@ -188,6 +200,7 @@ List phase_orchestrator(int phases,
                     cell_errors[static_cast<std::size_t>(sample_idx)] = epsilon;
                 }
 
+                if (!feasible) break;
                 // Median signed error for the exponent/phase cell becomes the heat-map entry.
                 std::sort(cell_errors.begin(), cell_errors.end());
                 const double cell_median =
@@ -196,6 +209,8 @@ List phase_orchestrator(int phases,
                                static_cast<std::size_t>(phase_idx)] = cell_median;
             }
         }
+
+        if (!feasible) continue;
 
         std::vector<double> q_abs(static_cast<std::size_t>(phases));
         std::vector<double> means(static_cast<std::size_t>(phases));
@@ -230,8 +245,10 @@ List phase_orchestrator(int phases,
         }
         roughness /= static_cast<double>(phases);
 
-        // Prefer smaller J; break ties with the smoothest phase-to-phase transitions.
-        if (!have_best || J < best_J || (std::abs(J - best_J) <= std::numeric_limits<double>::epsilon() && roughness < best_R)) {
+        // Lexicographic exact ties: J, roughness, then smallest signed magic integer.
+        if (!have_best || J < best_J ||
+            (J == best_J && (roughness < best_R ||
+                            (roughness == best_R && magic < best_magic)))) {
             have_best = true;
             best_J = J;
             best_R = roughness;
@@ -244,7 +261,7 @@ List phase_orchestrator(int phases,
     }
 
     if (!have_best) {
-        stop("No feasible magic constant found");
+        stop("No candidate has finite errors on every sampled input");
     }
 
     IntegerVector phase_ids(phases);

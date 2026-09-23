@@ -34,21 +34,20 @@ frsr_sample(
 \value{
 A data frame with \code{n} rows. When \code{keep_params = FALSE} (the default), the
 columns match \code{frsr(..., detail = TRUE)}:
-    \item{input}{Sampled input values}
-    \item{initial}{Initial approximation from integer operations}
-    \item{after_one}{Result after one Newton-Raphson iteration}
-    \item{final}{Result from the last iteration}
-    \item{error}{Absolute relative error of the final result}
-    \item{enre}{Exponent-normalized absolute relative error}
-    \item{diff}{Difference between the final and penultimate approximations}
-    \item{iters}{Number of iterations performed}
+\item{input}{Sampled input values}
+\item{initial}{Initial approximation from integer operations}
+\item{after_one}{Result after one Newton-Raphson iteration}
+\item{final}{Result from the last iteration}
+\item{error}{Absolute relative error of the final result}
+\item{diff}{Difference between the final and penultimate approximations}
+\item{iters}{Number of iterations performed}
 
 If \code{keep_params = TRUE}, the data frame will also include columns:
-    \item{magic}{Magic constant(s) used for each sample}
-    \item{NRmax}{Maximum number of Newton-Raphson iterations}
-    \item{A}{Newton-Raphson parameter A}
-    \item{B}{Newton-Raphson parameter B}
-    \item{tol}{Specified tolerance}
+\item{magic}{Magic constant(s) used for each sample}
+\item{NRmax}{Maximum number of Newton-Raphson iterations}
+\item{A}{Newton-Raphson parameter A}
+\item{B}{Newton-Raphson parameter B}
+\item{tol}{Specified tolerance}
 }
 \description{
 Generate samples for the Fast Reciprocal Square Root (FRSR) algorithm.
@@ -59,30 +58,29 @@ Values within this range are relatively good restoring constants, with
 numbers much higher or lower requiring more iterations to converge or
 not converging at all.
 
+Equal magic bounds always use that constant; reversed bounds are supported.
+Log-stratified sampling returns positive normal float32 values in the exact
+half-open interval and errors if none exist; its bounds must lie in
+\verb{[2^-126, 2^128]}. Other samplers return R doubles in the half-open interval;
+their subsequent float32 conversion follows \code{\link[=frsr]{frsr()}}. A NULL input bound
+selects the other bound as a fixed input, rather than sampling an interval.
+
 Three sampler modes explore different coverage patterns over
-\code{[x_min, x_max]}:
+\code{[x_min, x_max)}:
 \itemize{
-  \item{\strong{Log-stratified}:} Sample floats uniformly across exponent strata
-    This method is the default and covers the FP subset of the reals well.
-  \item{\strong{Irrational rotation}:} Step through \code{[0, 1)} via the golden
-    ratio increment and rescale. This method provides low-discrepancy coverage
-    of the unit interval.
-  \item{\strong{Uniform}:} Draw from the standard R uniform sampler and rescale.
-   Takes longer to smooth out than irrational rotation.
+\item{\strong{Log-stratified}:} Sample floats uniformly across exponent strata
+This method is the default and covers the FP subset of the reals well.
+\item{\strong{Irrational rotation}:} Step through \code{[0, 1)} via the golden
+ratio increment and rescale. This method provides low-discrepancy coverage
+of the unit interval.
+\item{\strong{Uniform}:} Draw from the standard R uniform sampler and rescale.
+Takes longer to smooth out than irrational rotation.
 }
 }
 \examples{
-
-#' \donttest{
-# Generate 4 samples using default parameters
-samples <- frsr_sample(4)
-print(samples)
-#       input  initial after_one    final        error         enre         diff iters
-# 1 0.8100569 1.154508  1.108492 1.108492 0.0023223383 0.0023223383 -0.046015978     1
-# 2 0.4073950 1.573407  1.566680 1.566680 0.0000273157 0.0000273157 -0.006727338     1
-# 3 0.6304980 1.359966  1.247014 1.247014 0.0098225391 0.0098225391 -0.112952113     1
-# 4 0.4316622 1.607666  1.514687 1.514687 0.0048355814 0.0048355814 -0.092979550     1
-#}
+set.seed(42)
+frsr_sample(4, magic_min = 0x5f3759df, magic_max = 0x5f3759df,
+            NRmax = 1, tol = 0, threads = 1, keep_params = TRUE)
 
 }
 \references{

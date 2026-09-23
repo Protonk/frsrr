@@ -1,3 +1,5 @@
+set.seed(42)
+
 describe("frsr_sample", {
     it("returns correct number of samples", {
         result <- frsr_sample(4)
@@ -43,7 +45,7 @@ describe("frsr_sample", {
     })
 
     it("returns parameters when keep_params is TRUE", {
-        base_cols <- c("input", "initial", "after_one", "final", "error", "enre", "diff", "iters")
+        base_cols <- c("input", "initial", "after_one", "final", "error", "diff", "iters")
         param_cols <- c("magic", "NRmax", "A", "B", "tol")
 
         result <- frsr_sample(4, keep_params = TRUE)
@@ -68,7 +70,7 @@ describe("frsr_sample", {
 
     it("returns documented columns", {
         result <- frsr_sample(4)
-        expected_cols <- c("input", "initial", "after_one", "final", "error", "enre", "diff", "iters")
+        expected_cols <- c("input", "initial", "after_one", "final", "error", "diff", "iters")
 
         expect_identical(names(result), expected_cols)
         expect_true(all(vapply(result, is.numeric, logical(1))))
@@ -122,4 +124,46 @@ describe("sample_inputs", {
             expect_identical(first, second)
         }
     })
+})
+
+test_that('equal and reversed magic bounds use only the requested constants', {
+    set.seed(104)
+    magic <- as.integer(0x5f3759df)
+    fit <- frsr_sample(16, magic_min = magic, magic_max = magic,
+                       NRmax = 0, keep_params = TRUE, threads = 1)
+    expect_identical(fit$magic, rep(magic, 16))
+    fit <- frsr_sample(64, magic_min = magic + 1L, magic_max = magic,
+                       NRmax = 0, keep_params = TRUE, threads = 1)
+    expect_setequal(fit$magic, c(magic, magic + 1L))
+    expect_type(frsrr:::.frsrr_draw_magics(8, -.Machine$integer.max,
+                                          .Machine$integer.max), 'integer')
+})
+
+test_that('log-stratified sampling honors original half-open float boundaries', {
+    set.seed(15)
+    draw <- function(low, high) frsrr:::.frsrr_draw_inputs(64L, low, high)
+    # Large exponents also test intervals whose log2 endpoints become identical.
+    for (e in c(-126, -1, 0, 30, 100, 127)) {
+        low <- 2^e
+        next_float <- low * (1 + 2^-23)
+        expect_identical(draw(low, low * (1 + 2^-24)), rep(low, 64))
+        expect_identical(draw(low, next_float), rep(low, 64))
+        expect_identical(draw(low * (1 + 2^-24), low * (1 + 2^-22)),
+                         rep(next_float, 64))
+        expect_error(draw(low * (1 + 2^-52), low * (1 + 2^-24)), 'No admissible')
+        expect_error(draw(low * (1 + 2^-24), next_float), 'No admissible')
+        values <- draw(low, low * (1 + 2^-22))
+        expect_setequal(values, c(low, next_float))
+        expect_true(all(values >= low & values < low * (1 + 2^-22)))
+    }
+    expect_identical(draw(2 - 2^-23, 2), rep(2 - 2^-23, 64))
+    expect_setequal(draw(2 - 2^-23, 2 + 2^-22), c(2 - 2^-23, 2))
+    largest <- (2 - 2^-23) * 2^127
+    expect_identical(draw(largest, 2^128), rep(largest, 64))
+    expect_error(draw(2^-127, 1), 'bounds')
+    # Exactly one R double in this half-open interval, for the other samplers.
+    for (method in c('irrational', 'uniform')) {
+        values <- frsrr:::.frsrr_draw_inputs(64L, 1, 1 + 2^-52, method)
+        expect_identical(values, rep(1, 64))
+    }
 })

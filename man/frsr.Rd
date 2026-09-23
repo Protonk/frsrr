@@ -17,7 +17,9 @@ frsr(
 )
 }
 \arguments{
-\item{x}{A numeric vector of input values.}
+\item{x}{Numeric inputs that convert to positive normal float32 values.
+Original values must not exceed \code{(2 - 2^-23) * 2^127}. Nonfinite values,
+zero and subnormal float32 inputs are unsupported.}
 
 \item{magic}{Integer restoring constant. Default is 0x5f3759df.}
 
@@ -41,26 +43,43 @@ to \code{RcppParallel::defaultNumThreads()} when unset.}
 \code{frsr} returns a numeric vector of \code{length(x)}.
 
 If \code{detail = TRUE}, returns a data frame of \code{length(x)} rows with columns:
-    \item{input}{The input values}
-    \item{initial}{Initial approximation from integer operations}
-    \item{after_one}{Result after one iteration of Newton-Raphson}
-    \item{final}{Result from final iteration}
-    \item{error}{Absolute relative error of final versus standard library}
-    \item{enre}{Exponent-normalized absolute relative error}
-    \item{diff}{Difference between final and penultimate approximations}
-    \item{iters}{Number of iterations performed}
+\item{input}{The input values}
+\item{initial}{Initial approximation from integer operations}
+\item{after_one}{Result after one iteration of Newton-Raphson}
+\item{final}{Result from final iteration}
+\item{error}{Double-precision absolute relative error against the reciprocal
+square root of the float32-rounded input; Inf for a nonfinite approximation}
+\item{diff}{Difference between final and penultimate approximations}
+\item{iters}{Number of iterations performed}
 
 If \code{keep_params = TRUE}, the data frame will also include columns:
-   \item{magic}{The magic constant(s) used}
-   \item{NRmax}{Maximum number of Newton-Raphson iterations}
-   \item{A}{Newton-Raphson parameter A}
-   \item{B}{Newton-Raphson parameter B}
-   \item{tol}{Specified tolerance}
+\item{magic}{The magic constant(s) used}
+\item{NRmax}{Maximum number of Newton-Raphson iterations}
+\item{A}{Newton-Raphson parameter A}
+\item{B}{Newton-Raphson parameter B}
+\item{tol}{Specified tolerance}
 }
 \description{
 A parameterized Fast Reciprocal Square Root algorithm written in C++.
 }
 \details{
+Inputs and coefficients are rounded to float32. The bit seed uses IEEE-754
+binary32 representation; each operation in \code{y * (A - ((B * x) * y) * y)}
+rounds to float32, with no fused multiply-subtract. This assumes the usual
+round-to-nearest environment with gradual underflow; altered rounding modes,
+flush-to-zero and fast-math builds are unsupported. Historical-machine or
+cross-platform bitwise equivalence is not promised.
+
+The reference is \code{1 / sqrt(x_float32)} evaluated in double precision,
+so \code{error} measures the algorithm rather than input-conversion error. The
+\code{input}, \code{A} and \code{B} columns retain the supplied values. \code{diff} is a double
+subtraction of the last two float32 approximations. \code{NRmax = 0} returns the
+seed, zero iterations, and NA for \code{after_one} and \code{diff}. A positive \code{tol}
+is checked after each refinement, so at least one step runs when \code{NRmax > 0}.
+Finite exploratory coefficients and magic constants may yield poor or
+nonfinite approximations; these are returned, with infinite error for the latter.
+The former \code{enre} column (a separate mantissa-only experiment) has been removed.
+
 The function supplies a Fast Reciprocal Square Root algorithm, which provides
 an approximation of 1/sqrt(x). The user can specify their own parameters. The
 default values are set to those used by the famous "fast inverse square
@@ -77,8 +96,8 @@ again by using integer bits in memory gives a good guess of
 
 The "magic" constant principally serves to restore the exponent bits lost
 when the input float is right shifted. A restoring constant which does only
-that is `0x5F400000`, given by Blinn 1997. Values of magic from roughly
-`0x5f2ffb20` to `0x5f404ed0` will give acceptable levels of error.
+that is \code{0x5F400000}, given by Blinn 1997. Values of magic from roughly
+\code{0x5f2ffb20} to \code{0x5f404ed0} will give acceptable levels of error.
 
 The Newton-Raphson step \eqn{y_{n+1} = y_n * (1.5 - 0.5 * x * y_n^2)}
 is performed repeatedly until the specified maximum NRmax is reached. The
@@ -90,23 +109,9 @@ not be fixed at 1.5 and 0.5 and can be set by the user. Note that
 if B =/= A - 1, the approximation may fail to converge.
 }
 \examples{
-\donttest{
-# Custom Newton-Raphson parameters
-result <- frsr(c(1, 4, 9, 16), magic = 0x5f375a86, NRmax = 2, A = 1.6, B = 0.6)
-## result is a vector of length 4
-print(result)
-# [1] 0.9990148 0.4995074 0.3337626 0.2497537
-
-# Optional detail
-result.df <- frsr(c(pi, 2^-31, 0.4, 6.02e23), detail = TRUE)
-## result.df is a dataframe with 4 rows and 8 columns
-print(signif(result.df, 3))
-#      input  initial after_one    final    error     enre      diff iters
-# 1 3.14e+00 5.74e-01  5.64e-01 5.64e-01 0.000412 0.001560 -9.56e-03     1
-# 2 4.66e-10 4.69e+04  4.63e+04 4.63e+04 0.000250 0.001690 -6.09e+02     1
-# 3 4.00e-01 1.63e+00  1.58e+00 1.58e+00 0.001600 0.001600 -5.38e-02     1
-# 4 6.02e+23 1.31e-12  1.29e-12 1.29e-12 0.000282 0.000282 -1.80e-14     1
-# }
+frsr(c(1, 2, 4), magic = 0x5f3759df, NRmax = 0, tol = 0, threads = 1)
+frsr(c(pi, 0.4), magic = 0x5f3759df, NRmax = 2, tol = 0,
+     detail = TRUE, threads = 1)
 }
 \references{
 J. F. Blinn, (July-Aug. 1997) "Floating-point tricks," in IEEE Computer Graphics and Applications, vol. 17, no. 4, pp. 80-84 \doi{10.1109/38.595279}

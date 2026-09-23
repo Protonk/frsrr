@@ -7,16 +7,16 @@ NULL
 
 #' Internal wrapper around `_frsrr_sample_inputs`.
 #'
-#' Draws `n` floating-point samples inside `[x_min, x_max]` using one of the
+#' Draws `n` floating-point samples inside `[x_min, x_max)` using one of the
 #' supported sampling strategies. Keeping this helper in R makes argument
 #' validation explicit before control passes to the parallel C++ workers.
 #'
 #' @param n Non-negative integer number of draws.
-#' @param x_min,x_max Closed interval bounds (must satisfy `0 < x_min < x_max`).
+#' @param x_min,x_max Lower-inclusive, upper-exclusive bounds (must satisfy `0 < x_min < x_max`).
 #' @param method Character scalar naming the sampler (see `.frsrr_sampler_methods`).
 #'
 #' @return
-#' A numeric vector of length `n` whose values lie within `[x_min, x_max]`.
+#' A numeric vector of length `n` whose values lie within `[x_min, x_max)`.
 #'
 #' @keywords internal
 #' @noRd
@@ -51,8 +51,15 @@ NULL
 #' numbers much higher or lower requiring more iterations to converge or
 #' not converging at all.
 #'
+#' Equal magic bounds always use that constant; reversed bounds are supported.
+#' Log-stratified sampling returns positive normal float32 values in the exact
+#' half-open interval and errors if none exist; its bounds must lie in
+#' `[2^-126, 2^128]`. Other samplers return R doubles in the half-open interval;
+#' their subsequent float32 conversion follows [frsr()]. A NULL input bound
+#' selects the other bound as a fixed input, rather than sampling an interval.
+#'
 #' Three sampler modes explore different coverage patterns over
-#' \code{[x_min, x_max]}:
+#' \code{[x_min, x_max)}:
 #' \itemize{
 #'   \item{\strong{Log-stratified}:} Sample floats uniformly across exponent strata
 #'     This method is the default and covers the FP subset of the reals well.
@@ -71,7 +78,6 @@ NULL
 #'     \item{after_one}{Result after one Newton-Raphson iteration}
 #'     \item{final}{Result from the last iteration}
 #'     \item{error}{Absolute relative error of the final result}
-#'     \item{enre}{Exponent-normalized absolute relative error}
 #'     \item{diff}{Difference between the final and penultimate approximations}
 #'     \item{iters}{Number of iterations performed}
 #'
@@ -93,17 +99,9 @@ NULL
 #' Pharr, M. (2022) Sampling in Floating Point (2/3): 1D Intervals. Matt Pharr's Blog, \url{https://pharr.org/matt/blog/2022/03/14/sampling-float-intervals}
 #'
 #' @examples
-#'
-#' #' \donttest{
-#' # Generate 4 samples using default parameters
-#' samples <- frsr_sample(4)
-#' print(samples)
-#' #       input  initial after_one    final        error         enre         diff iters
-#' # 1 0.8100569 1.154508  1.108492 1.108492 0.0023223383 0.0023223383 -0.046015978     1
-#' # 2 0.4073950 1.573407  1.566680 1.566680 0.0000273157 0.0000273157 -0.006727338     1
-#' # 3 0.6304980 1.359966  1.247014 1.247014 0.0098225391 0.0098225391 -0.112952113     1
-#' # 4 0.4316622 1.607666  1.514687 1.514687 0.0048355814 0.0048355814 -0.092979550     1
-#' #}
+#' set.seed(42)
+#' frsr_sample(4, magic_min = 0x5f3759df, magic_max = 0x5f3759df,
+#'             NRmax = 1, tol = 0, threads = 1, keep_params = TRUE)
 #'
 #' @export
 #' @name frsr_sample
@@ -143,6 +141,12 @@ frsr_sample <- function(n,
         stop("`x_min` must be less than `x_max` when both are supplied")
     }
 
+    if (is.null(magic_min) && is.null(magic_max)) {
+        stop("At least one magic bound is required")
+    }
+    if (is.null(x_min) && is.null(x_max)) {
+        stop("At least one input bound is required")
+    }
     # Determine magic numbers based on whether magic_min or magic_max is NULL
     magic_numbers <- if (is.null(magic_min)) {
         rep(magic_max, n)  # Use magic_max if magic_min is NULL
@@ -151,7 +155,7 @@ frsr_sample <- function(n,
     } else {
         # Sample with replacement so we explore the full range even when n
         # exceeds the integer interval size.
-        sample(magic_min:magic_max, n, replace = TRUE)
+        .frsrr_draw_magics(n, magic_min, magic_max)
     }
     # Determine inputs based on whether x_min or x_max is NULL
     inputs <- if (is.null(x_min)) {
@@ -169,4 +173,18 @@ frsr_sample <- function(n,
     # Call frsr with generated inputs and parameters
     # detail = TRUE keeps diagnostics users typically want
     frsr(x = inputs, magic = magic_numbers, detail = TRUE, ...)
+}
+
+# Sample offsets, avoiding sample()'s special treatment of a singleton integer.
+# Signed R integers (except NA) remain valid exploratory bit patterns.
+.frsrr_draw_magics <- function(n, lower, upper) {
+    bounds <- c(lower, upper)
+    if (length(bounds) != 2L || any(!is.finite(bounds) |
+        abs(bounds) > .Machine$integer.max | bounds != trunc(bounds))) {
+        stop("Magic bounds must be non-missing R integers", call. = FALSE)
+    }
+    lower <- as.double(lower)
+    upper <- as.double(upper)
+    step <- if (upper >= lower) 1 else -1
+    as.integer(lower + step * (sample.int(abs(upper - lower) + 1, n, replace = TRUE) - 1))
 }

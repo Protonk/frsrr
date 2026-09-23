@@ -1,3 +1,5 @@
+set.seed(42)
+
 describe("frsr", {
   it("returns expected structure when detail argument is used", {
     result <- frsr(c(1, 4, 9), detail = TRUE)
@@ -7,7 +9,6 @@ describe("frsr", {
       "after_one",
       "final",
       "error",
-      "enre",
       "diff",
       "iters"
     )
@@ -88,7 +89,6 @@ describe("frsr", {
       "after_one",
       "final",
       "error",
-      "enre",
       "diff",
       "iters"
     )

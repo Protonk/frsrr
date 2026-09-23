@@ -6,9 +6,19 @@
 #' are returned to help diagnose phase bias.
 #'
 #' @details
-#' log2 phases are a useful way to this function as it contains a
-#' linear approximation to log2 whose performance varies greatly
-#' depending on proximity to powers of two.
+#' Every candidate uses the same randomly sampled grid and the arithmetic/error
+#' contract of [frsr()] with A = 1.5, B = 0.5 and tol = 0. Phase labels describe
+#' the unrounded log2 draws; rounding can cross a phase boundary. Values are
+#' clamped to the largest float in their exponent slab to avoid crossing into
+#' the next exponent or overflowing at exponent 127.
+#'
+#' Candidates are ordered by J, then roughness R, then the smallest magic
+#' integer, using exact ties. Permuting or inserting candidates does not change
+#' the inputs assigned to existing candidates with the same seed. A candidate
+#' with any nonfinite approximation is excluded; the call errors if none remain.
+#' The winner is best among the tested candidates on this sampled grid.
+#' The `settings` component retains NRmax, q, per_cell, exponents and the distinct
+#' candidate magics. Use `set.seed()` to reproduce the grid.
 #'
 #' @param phases Number of equally sized phase bins spanning `[0, 1)`. Must be
 #'   a positive integer.
@@ -18,8 +28,8 @@
 #' @param magics Integer vector of candidate magic constants to evaluate.
 #' @param q Quantile applied to the absolute relative errors inside each phase.
 #'   Must satisfy `0 < q <= 1`.
-#' @param NRmax Newton steps applied through [`frsr0()`]. Reuses existing
-#'   Newton logic; the default sticks with the raw restoring constant path.
+#' @param NRmax Number of float32 Newton steps. The default returns the raw
+#'   restoring-constant approximation without refinement.
 #'
 #' @return
 #' `frsr_phase()` returns a list with components:
@@ -29,21 +39,15 @@
 #'   \item{R}{Mean absolute difference between consecutive phase-wise mean errors.}
 #'   \item{phase_tbl}{Data frame with the per-phase quantile, mean, median, and
 #'     sample count.}
+#'   \item{settings}{Configuration needed to interpret the sampled search.}
 #'   \item{heat}{A matrix indexed by exponents x phases storing per-cell median
 #'     signed errors, suitable for plotting.}
 #' }
 #'
 #' @examples
-#' \donttest{
-#' magics <- as.integer(seq.int(0x5f3750df, 0x5f3765df, by = 512L))
-#' phase_fit <- frsr_phase(
-#'   phases = 32L,
-#'   exponents = -8L:8L,
-#'   per_cell = 8L,
-#'   magics = magics
-#' )
-#' phase_fit$magic
-#' }
+#' set.seed(42)
+#' frsr_phase(phases = 8, exponents = -2:2, per_cell = 4,
+#'            magics = c(0x5f3759df, 0x5f375a86), NRmax = 1)
 #'
 #' @export
 frsr_phase <- function(phases = 128L,
@@ -83,14 +87,15 @@ frsr_phase <- function(phases = 128L,
     stop("`q` must satisfy 0 < q <= 1", call. = FALSE)
   }
 
-  NRmax <- as.integer(NRmax)[1]
-  if (is.na(NRmax) || NRmax < 0L) {
+  NRmax <- as.numeric(NRmax)[1]
+  if (!is.finite(NRmax) || NRmax < 0 || NRmax > .Machine$integer.max || NRmax != trunc(NRmax)) {
     stop("`NRmax` must be a non-negative integer", call. = FALSE)
   }
+  NRmax <- as.integer(NRmax)
 
   # Keep conversion/validation in R so the hot C++ path can assume scalars,
   # which avoids repeatedly checking lengths inside the tight sampling loops.
-  .Call(
+  result <- .Call(
     '_frsrr_phase_orchestrator',
     PACKAGE = 'frsrr',
     phases,
@@ -100,4 +105,7 @@ frsr_phase <- function(phases = 128L,
     q,
     NRmax
   )
+  result$settings <- list(NRmax = NRmax, q = q, per_cell = per_cell,
+                          exponents = exponents, magics = sort(unique(magics)))
+  result
 }

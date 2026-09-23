@@ -1,0 +1,7 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^AGENTS\.md$
+^\.vscode/*$
+^frsrr-maintenance-handoff\.md$
+^\.github$
+^frsrr-maintenance-report\.md$

@@ -1,4 +1,5 @@
 #include "sample.h"
+#include "frsr.h"
 
 #include <algorithm>
 #include <bit>
@@ -36,56 +37,25 @@ struct Stratum {
     uint32_t count;
 };
 
-inline std::vector<Stratum> BuildStrata(double low_log2, double high_log2) {
-    const long double lower_bound = static_cast<long double>(std::exp2(low_log2));
-    const long double upper_bound = static_cast<long double>(std::exp2(high_log2));
-
+inline std::vector<Stratum> BuildStrata(double lower_bound, double upper_bound) {
     constexpr uint32_t kSigCount = 1u << 23;
-    const long double SigCountLD = static_cast<long double>(kSigCount);
-    const int emin = std::max(-126, static_cast<int>(std::floor(low_log2)));
-    const int emax = std::min(127, static_cast<int>(std::ceil(high_log2)) - 1);
-
     std::vector<Stratum> strata;
-    strata.reserve(std::max(0, emax - emin + 1));
-
-    for (int e = emin; e <= emax; ++e) {
-        long double twoe = std::ldexp(1.0L, e);
-
-        uint32_t smin = 0u;
-        if (e == emin) {
-            long double ratio = lower_bound / twoe - 1.0L;
-            if (ratio > 0.0L) {
-                long double val = std::ceil(ratio * SigCountLD);
-                if (val >= SigCountLD) {
-                    continue;
-                }
-                if (val < 0.0L) {
-                    val = 0.0L;
-                }
-                smin = static_cast<uint32_t>(val);
-            }
-        }
-
-        uint32_t smax = kSigCount - 1u;
-        if (e == emax) {
-            long double ratio = upper_bound / twoe - 1.0L;
-            long double val = std::floor(ratio * SigCountLD) - 1.0L;
-            if (val < 0.0L) {
-                continue;
-            }
-            if (val > SigCountLD - 1.0L) {
-                val = SigCountLD - 1.0L;
-            }
-            smax = static_cast<uint32_t>(val);
-        }
-
-        if (smax < smin) {
-            continue;
-        }
-
-        strata.push_back(Stratum{e, smin, smax, static_cast<uint32_t>(smax - smin + 1)});
+    // There are only 254 normal exponent strata. Work directly from the original
+    // bounds: a log2/exp2 round trip can move an endpoint across an adjacent float.
+    for (int e = -126; e <= 127; ++e) {
+        const double twoe = std::ldexp(1.0, e);
+        const double low = std::max(lower_bound, twoe);
+        const double high = std::min(upper_bound, 2.0 * twoe);
+        if (low >= high) continue;
+        // Float values are integer multiples of 2^(e-23). For [low, high),
+        // ceil(high / spacing) - 1 is the last admissible integer, even when
+        // high itself is not representable in float32. Power-of-two scaling is exact.
+        const auto smin = static_cast<uint32_t>(std::ceil(std::ldexp(low, 23 - e)) - kSigCount);
+        const double last = std::ceil(std::ldexp(high, 23 - e)) - kSigCount - 1.0;
+        if (last < smin) continue;
+        const auto smax = static_cast<uint32_t>(last);
+        strata.push_back(Stratum{e, smin, smax, smax - smin + 1u});
     }
-
     return strata;
 }
 
@@ -103,19 +73,10 @@ NumericVector LogStratified(int n, double x_min, double x_max) {
     if (x_min <= 0.0 || x_max <= 0.0) {
         throw std::invalid_argument("`x_min` and `x_max` must be > 0 for log-stratified sampling");
     }
-    const double low = std::log2(x_min);
-    const double high = std::log2(x_max);
-    if (!std::isfinite(low) || !std::isfinite(high)) {
-        throw std::invalid_argument("Log2 bounds must be finite");
+    if (x_min < std::ldexp(1.0, -126) || x_max > std::ldexp(1.0, 128)) {
+        throw std::invalid_argument("Log-stratified bounds must satisfy 2^-126 <= x_min < x_max <= 2^128");
     }
-    if (high <= low) {
-        throw std::invalid_argument("`x_max` must be greater than `x_min`");
-    }
-    if (low < -126 || high > 128) {
-        throw std::invalid_argument("Bounds must satisfy -126 <= log2(x_min) < log2(x_max) <= 128");
-    }
-
-    std::vector<Stratum> strata = BuildStrata(low, high);
+    std::vector<Stratum> strata = BuildStrata(x_min, x_max);
     if (strata.empty()) {
         throw std::runtime_error("No admissible float32 strata within the requested bounds");
     }
@@ -154,7 +115,7 @@ NumericVector IrrationalRotation(int n, double x_min, double x_max) {
     double current = start;
     for (int i = 0; i < n; ++i) {
         double frac = FractionalPart(current);
-        result[i] = x_min + span * frac;
+        result[i] = std::min(x_min + span * frac, std::nextafter(x_max, x_min));
         current += kAlpha;
     }
     return result;
@@ -162,7 +123,11 @@ NumericVector IrrationalRotation(int n, double x_min, double x_max) {
 
 NumericVector Uniform(int n, double x_min, double x_max) {
     RNGScope scope;
-    return Rcpp::runif(n, x_min, x_max);
+    NumericVector result = Rcpp::runif(n, x_min, x_max);
+    for (int i = 0; i < n; ++i) {
+        result[i] = std::min(result[i], std::nextafter(x_max, x_min));
+    }
+    return result;
 }
 
 }  // namespace sample_detail

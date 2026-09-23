@@ -1,7 +1,7 @@
 Package: frsrr
 Type: Package
 Title: A Customizable Fast Reciprocal Square Root
-Version: 1.0.0
+Version: 1.1.0
 Authors@R: person(given = "Adam",
                   family = "Hyland",
                   role = c("aut", "cre"),
@@ -12,13 +12,14 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.2
+Roxygen: list(markdown = TRUE)
 Imports: 
     Rcpp,
-    RcppParallel
+    RcppParallel (>= 5.1.11-2)
 LinkingTo: 
     Rcpp,
     RcppParallel
 Suggests: 
     testthat (>= 3.0.0)
-SystemRequirements: C++20
+SystemRequirements: C++20, GNU make
 Config/testthat/edition: 3

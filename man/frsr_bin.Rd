@@ -33,7 +33,7 @@ frsr_bin(
 
 \item{dependent}{Character scalar naming the metric reported as dependent on
 the chosen objective. Defaults to \code{"avg_relative_error"}.
-Both `objective` and `dependent` accept: \code{"max_relative_error"},
+Both \code{objective} and \code{dependent} accept: \code{"max_relative_error"},
 \code{"avg_relative_error"}, or \code{"rmse_relative_error"}.}
 
 \item{float_samples}{Integer. The number of floating-point samples generated per bin.}
@@ -56,38 +56,42 @@ Currently supports \code{method} (one of \code{"log_stratified"},
 }
 \value{
 A data frame with columns:
-    \item{N_bins}{Total number of bins}
-    \item{Location}{Bin number (1-indexed)}
-    \item{Range_Min}{Minimum value of the bin range}
-    \item{Range_Max}{Maximum value of the bin range}
-    \item{Magic}{Optimal magic constant as an integer}
-    \item{Objective}{Metric minimized for that bin (e.g., maximum relative error)}
-    \item{Dependent}{Secondary metric reported for the winning magic.}
+\item{N_bins}{Total number of bins}
+\item{Location}{Bin number (1-indexed)}
+\item{Range_Min}{Minimum value of the bin range}
+\item{Range_Max}{Maximum value of the bin range}
+\item{Magic}{Best tested magic constant on the sampled inputs, as an integer}
+\item{Objective}{Metric minimized for that bin (e.g., maximum relative error)}
+\item{Dependent}{Secondary metric reported for the winning magic.}
 }
 \description{
-Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins
+Select sampled magic constants for the Fast Reciprocal Square Root algorithm over specified bins
 by minimizing an objective metric.
 }
 \details{
-This function divides the range [x_min, x_max] into n_bins bins and generates float_samples
-floating-point samples within each bin. It then tests magic_samples magic constants within
-the range [magic_min, magic_max] to find the optimal magic constant for each bin that minimizes
-the maximum relative error per bin. The achievable error and optimal constants will change with
-bin size and number of bins, as well as the integer and float samples.
+Each bin is a half-open interval \verb{[Range_Min, Range_Max)}. All candidates
+in a bin share the same sampled inputs and the float32 arithmetic and
+double-precision rounded-input error contract of \code{\link[=frsr]{frsr()}}, using A = 1.5,
+B = 0.5 and tol = 0. Equal magic bounds select that constant; reversed
+bounds are supported. Nonfinite approximations disqualify a candidate;
+an error is raised if none remain. Exact objective ties select the smallest
+magic integer. This is the best tested candidate on these samples, not a
+claim of global optimality.
 
-The FRSR is periodic over 0.25 to 1.0 with a magic constant of 0x5f3759df. I don't know if
-this is generally true. Interestingly, the linear approximation to the logarithm used is
-periodic over integral powers of two, and so loops twice before the FISR does once.
+Double sums use fixed sample blocks joined in a fixed order. For the same
+build, floating-point environment and samples, measurements and selection
+are identical across thread counts. This is not a cross-platform guarantee.
+Use \code{set.seed()} to reproduce sampling.
+
+The data frame's \code{settings} attribute records \code{objective}, \code{dependent},
+\code{NRmax}, \code{method}, \code{float_samples}, \code{magic_samples}, \code{magic_min}, \code{magic_max}
+and \code{threads}. Preserve this attribute when saving results (e.g. with
+\code{saveRDS()}); plain CSV does not retain it.
 }
 \examples{
-\donttest{
-# Generate optimal magic constants for the range [0.25, 1.0] divided into 4 bins
-result <- frsr_bin()
-print(result)
-#   N_bins Location Range_Min Range_Max      Magic   Objective   Dependent
-# 1      4        1 0.2500000 0.3535534 1597413411 0.0004549199 0.000134129
-# 2      4        2 0.3535534 0.5000000 1597115686 0.0000617551 0.000033011
-# 3      4        3 0.5000000 0.7071068 1597150657 0.0000348620 0.000021047
-# 4      4        4 0.7071068 1.0000000 1597488127 0.0008389181 0.000244221
-# }
+set.seed(42)
+result <- frsr_bin(n_bins = 2, float_samples = 32, magic_samples = 16,
+                   NRmax = 1, threads = 1)
+result
+attr(result, "settings")
 }

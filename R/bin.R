@@ -5,7 +5,7 @@ NULL
 
 #' FRSR Bin
 #'
-#' Generate optimal magic constants for the Fast Reciprocal Square Root algorithm over specified bins
+#' Select sampled magic constants for the Fast Reciprocal Square Root algorithm over specified bins
 #' by minimizing an objective metric.
 #'
 #' @param x_min Numeric lower bound (> 0). Default is 0.25.
@@ -37,32 +37,36 @@ NULL
 #'     \item{Location}{Bin number (1-indexed)}
 #'     \item{Range_Min}{Minimum value of the bin range}
 #'     \item{Range_Max}{Maximum value of the bin range}
-#'     \item{Magic}{Optimal magic constant as an integer}
+#'     \item{Magic}{Best tested magic constant on the sampled inputs, as an integer}
 #'     \item{Objective}{Metric minimized for that bin (e.g., maximum relative error)}
 #'     \item{Dependent}{Secondary metric reported for the winning magic.}
 #'
 #' @details
-#' This function divides the range [x_min, x_max] into n_bins bins and generates float_samples
-#' floating-point samples within each bin. It then tests magic_samples magic constants within
-#' the range [magic_min, magic_max] to find the optimal magic constant for each bin that minimizes
-#' the maximum relative error per bin. The achievable error and optimal constants will change with
-#' bin size and number of bins, as well as the integer and float samples.
+#' Each bin is a half-open interval `[Range_Min, Range_Max)`. All candidates
+#' in a bin share the same sampled inputs and the float32 arithmetic and
+#' double-precision rounded-input error contract of [frsr()], using A = 1.5,
+#' B = 0.5 and tol = 0. Equal magic bounds select that constant; reversed
+#' bounds are supported. Nonfinite approximations disqualify a candidate;
+#' an error is raised if none remain. Exact objective ties select the smallest
+#' magic integer. This is the best tested candidate on these samples, not a
+#' claim of global optimality.
 #'
-#' The FRSR is periodic over 0.25 to 1.0 with a magic constant of 0x5f3759df. I don't know if
-#' this is generally true. Interestingly, the linear approximation to the logarithm used is
-#' periodic over integral powers of two, and so loops twice before the FISR does once.
+#' Double sums use fixed sample blocks joined in a fixed order. For the same
+#' build, floating-point environment and samples, measurements and selection
+#' are identical across thread counts. This is not a cross-platform guarantee.
+#' Use `set.seed()` to reproduce sampling.
+#'
+#' The data frame's `settings` attribute records `objective`, `dependent`,
+#' `NRmax`, `method`, `float_samples`, `magic_samples`, `magic_min`, `magic_max`
+#' and `threads`. Preserve this attribute when saving results (e.g. with
+#' `saveRDS()`); plain CSV does not retain it.
 #'
 #' @examples
-#' \donttest{
-#' # Generate optimal magic constants for the range [0.25, 1.0] divided into 4 bins
-#' result <- frsr_bin()
-#' print(result)
-#' #   N_bins Location Range_Min Range_Max      Magic   Objective   Dependent
-#' # 1      4        1 0.2500000 0.3535534 1597413411 0.0004549199 0.000134129
-#' # 2      4        2 0.3535534 0.5000000 1597115686 0.0000617551 0.000033011
-#' # 3      4        3 0.5000000 0.7071068 1597150657 0.0000348620 0.000021047
-#' # 4      4        4 0.7071068 1.0000000 1597488127 0.0008389181 0.000244221
-#' # }
+#' set.seed(42)
+#' result <- frsr_bin(n_bins = 2, float_samples = 32, magic_samples = 16,
+#'                    NRmax = 1, threads = 1)
+#' result
+#' attr(result, "settings")
 #' @name frsr_bin
 NULL
 
@@ -87,7 +91,11 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
   magic_samples <- as.integer(magic_samples)[1]
   magic_min <- as.integer(magic_min)[1]
   magic_max <- as.integer(magic_max)[1]
-  NRmax <- as.integer(NRmax)[1]
+  NRmax <- as.numeric(NRmax)[1]
+  if (!is.finite(NRmax) || NRmax < 0 || NRmax > .Machine$integer.max || NRmax != trunc(NRmax)) {
+    stop("`NRmax` must be a non-negative integer", call. = FALSE)
+  }
+  NRmax <- as.integer(NRmax)
   threads <- frsrr_configure_threads(threads)
 
   dots <- list(...)
@@ -108,6 +116,15 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     sampler_method <- as.character(sampler_method)[1]
   }
 
+  if (is.na(float_samples) || float_samples < 1L) stop("`float_samples` must be positive")
+  if (is.na(magic_samples) || magic_samples < 1L) stop("`magic_samples` must be positive")
+  if (is.na(magic_min) || is.na(magic_max)) stop("Magic bounds cannot be NA")
+  sampler_method <- match.arg(sampler_method, .frsrr_sampler_methods)
+  settings <- list(objective = objective, dependent = dependent, NRmax = NRmax,
+                   method = sampler_method, float_samples = float_samples,
+                   magic_samples = magic_samples, magic_min = magic_min,
+                   magic_max = magic_max, threads = threads)
+
   # Argument coercions above intentionally drop vector inputs to a single scalar;
   # the downstream C++ helpers only read the first element, so we keep behavior
   # predictable by trimming here instead of letting implicit recycling occur.
@@ -121,7 +138,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     stop("`x_min` must be less than `x_max`")
   }
   if (is.na(n_bins) || n_bins < 1L) {
-    return(data.frame(
+    return(structure(data.frame(
       N_bins = integer(0),
       Location = integer(0),
       Range_Min = numeric(0),
@@ -129,7 +146,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
       Magic = integer(0),
       Objective = numeric(0),
       Dependent = numeric(0)
-    ))
+    ), settings = settings))
   }
 
   # Divide [x_min, x_max] into evenly spaced bin boundaries
@@ -149,9 +166,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     )
     # Magic constants are explored via simple sampling; drawing with replacement
     # keeps the runtime flat even when the range is narrower than magic_samples.
-    magics <- sample(magic_min:magic_max,
-                     size = magic_samples,
-                     replace = TRUE)
+    magics <- .frsrr_draw_magics(magic_samples, magic_min, magic_max)
     # Call the C++ function to compute optimal magic constant
     result <- .Call('_frsrr_search_optimal_constant',
                     PACKAGE = 'frsrr',
@@ -171,7 +186,7 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
   # Each row inherits the global bin count here so callers can reshape or merge
   # without having to carry around the per-call metadata separately.
   result$N_bins <- rep.int(n_bins, nrow(result))
-  result[c(
+  result <- result[c(
     "N_bins",
     "Location",
     "Range_Min",
@@ -180,4 +195,6 @@ frsr_bin <- function(x_min = 0.25, x_max = 1.0,
     "Objective",
     "Dependent"
   )]
+  attr(result, "settings") <- settings
+  result
 }

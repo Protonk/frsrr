@@ -20,7 +20,7 @@ This repo contains a small didactic R/C++ package for exploring fast reciprocal 
 - Keep temporary build artefacts (`frsrr.Rcheck/`, tarballs) out of git.
 
 ## Coding expectations
-- R code: validate inputs early, keep vectorised operations where practical, and align argument names/behaviour across functions (`frsr`, `frsr_sample`, `frsr_bin`, `frsr_phase`, `frsr_NR`).
+- R code: validate inputs early, keep vectorised operations where practical, and align argument names/behaviour across functions (`frsr`, `frsr_sample`, `frsr_bin`, `frsr_phase`).
 - C++ code: prefer modern C++20, keep functions small, and leave brief comments near tricky bit manipulations or Newton steps. Avoid try/catch around imports.
 - Threading: respect user-provided `threads` or `options(frsrr.threads)`; avoid oversubscribing shared hardware.
 - Performance notes belong in comments or docstrings, not hidden magic numbers.
@@ -36,7 +36,7 @@ This repo contains a small didactic R/C++ package for exploring fast reciprocal 
 4. Keep commits focused and messages descriptive.
 
 ## Contact points inside the code
-- Core entry points: `R/frsr.R`, `R/sample.R`, `R/bin.R`, `R/phase.R`, `R/nr.R` with matching C++ in `src/`.
+- Core entry points: `R/frsr.R`, `R/sample.R`, `R/bin.R`, `R/phase.R` with matching C++ in `src/`.
 - Thread config helper: `R/threads.R`.
 
 Follow this guide to keep the project coherent and approachable for anyone exploring fast reciprocal square root techniques.

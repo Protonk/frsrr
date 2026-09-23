@@ -1,3 +1,5 @@
+set.seed(42)
+
 describe("frsr_bin", {
   it("returns documented columns", {
     result <- frsr_bin(float_samples = 8, magic_samples = 8)
@@ -121,4 +123,27 @@ describe("frsr_bin", {
     second <- do.call(frsr_bin, args)
     expect_identical(first, second)
   })
+})
+
+test_that('singleton magic searches retain their configuration when saved', {
+  set.seed(59)
+  magic <- as.integer(0x5f3759df)
+  fit <- frsr_bin(n_bins = 2, float_samples = 32, magic_samples = 8,
+                  magic_min = magic, magic_max = magic, NRmax = 1,
+                  objective = 'rmse_relative_error', dependent = 'max_relative_error',
+                  method = 'irrational', threads = 1)
+  expect_identical(fit$Magic, rep(magic, 2))
+  settings <- attr(fit, 'settings')
+  expect_identical(settings, list(objective = 'rmse_relative_error',
+    dependent = 'max_relative_error', NRmax = 1L, method = 'irrational',
+    float_samples = 32L, magic_samples = 8L, magic_min = magic, magic_max = magic,
+    threads = 1L))
+  path <- tempfile(fileext = '.rds')
+  on.exit(unlink(path))
+  saveRDS(fit, path)
+  expect_identical(readRDS(path), fit)
+  expect_named(attr(frsr_bin(n_bins = 0, threads = 1), 'settings'), names(settings))
+  expect_error(frsr_bin(float_samples = 0), 'positive')
+  expect_error(frsr_bin(magic_samples = 0), 'positive')
+  expect_error(frsr_bin(NRmax = -1), 'non-negative')
 })

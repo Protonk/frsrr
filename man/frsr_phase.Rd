@@ -14,32 +14,33 @@ frsr_phase(
 )
 }
 \arguments{
-\item{phases}{Number of equally sized phase bins spanning `[0, 1)`. Must be
+\item{phases}{Number of equally sized phase bins spanning \verb{[0, 1)}. Must be
 a positive integer.}
 
 \item{exponents}{Integer vector of unbiased exponents. Values must keep the
-generated floats in the normalized range (i.e. `[-126, 127]`).}
+generated floats in the normalized range (i.e. \verb{[-126, 127]}).}
 
-\item{per_cell}{Samples to generate for each `(phase, exponent)` cell.}
+\item{per_cell}{Samples to generate for each \verb{(phase, exponent)} cell.}
 
 \item{magics}{Integer vector of candidate magic constants to evaluate.}
 
 \item{q}{Quantile applied to the absolute relative errors inside each phase.
-Must satisfy `0 < q <= 1`.}
+Must satisfy \verb{0 < q <= 1}.}
 
-\item{NRmax}{Newton steps applied through [`frsr0()`]. Reuses existing
-Newton logic; the default sticks with the raw restoring constant path.}
+\item{NRmax}{Number of float32 Newton steps. The default returns the raw
+restoring-constant approximation without refinement.}
 }
 \value{
-`frsr_phase()` returns a list with components:
+\code{frsr_phase()} returns a list with components:
 \describe{
-  \item{magic}{Chosen magic constant (integer).}
-  \item{J}{Objective value, i.e. the maximum quantile across phases.}
-  \item{R}{Mean absolute difference between consecutive phase-wise mean errors.}
-  \item{phase_tbl}{Data frame with the per-phase quantile, mean, median, and
-    sample count.}
-  \item{heat}{A matrix indexed by exponents x phases storing per-cell median
-    signed errors, suitable for plotting.}
+\item{magic}{Chosen magic constant (integer).}
+\item{J}{Objective value, i.e. the maximum quantile across phases.}
+\item{R}{Mean absolute difference between consecutive phase-wise mean errors.}
+\item{phase_tbl}{Data frame with the per-phase quantile, mean, median, and
+sample count.}
+\item{settings}{Configuration needed to interpret the sampled search.}
+\item{heat}{A matrix indexed by exponents x phases storing per-cell median
+signed errors, suitable for plotting.}
 }
 }
 \description{
@@ -49,20 +50,23 @@ the magic that minimizes the worst phase-wise tail error. Statistics
 are returned to help diagnose phase bias.
 }
 \details{
-log2 phases are a useful way to this function as it contains a
-linear approximation to log2 whose performance varies greatly
-depending on proximity to powers of two.
+Every candidate uses the same randomly sampled grid and the arithmetic/error
+contract of \code{\link[=frsr]{frsr()}} with A = 1.5, B = 0.5 and tol = 0. Phase labels describe
+the unrounded log2 draws; rounding can cross a phase boundary. Values are
+clamped to the largest float in their exponent slab to avoid crossing into
+the next exponent or overflowing at exponent 127.
+
+Candidates are ordered by J, then roughness R, then the smallest magic
+integer, using exact ties. Permuting or inserting candidates does not change
+the inputs assigned to existing candidates with the same seed. A candidate
+with any nonfinite approximation is excluded; the call errors if none remain.
+The winner is best among the tested candidates on this sampled grid.
+The \code{settings} component retains NRmax, q, per_cell, exponents and the distinct
+candidate magics. Use \code{set.seed()} to reproduce the grid.
 }
 \examples{
-\donttest{
-magics <- as.integer(seq.int(0x5f3750df, 0x5f3765df, by = 512L))
-phase_fit <- frsr_phase(
-  phases = 32L,
-  exponents = -8L:8L,
-  per_cell = 8L,
-  magics = magics
-)
-phase_fit$magic
-}
+set.seed(42)
+frsr_phase(phases = 8, exponents = -2:2, per_cell = 4,
+           magics = c(0x5f3759df, 0x5f375a86), NRmax = 1)
 
 }
