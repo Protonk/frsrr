@@ -240,13 +240,11 @@ The input and coefficients round to float32, and each operation of
 The reference and error measurements use double precision and target the
 float32-rounded input, rather than the original R double. Ordinary rounding
 with gradual underflow is assumed; fast-math and altered rounding modes are
-unsupported. This package instruments an arithmetic experiment, not a hardware
-throughput benchmark or a historical-machine emulator.
+unsupported.
 
 `detail = TRUE` returns `input`, `initial`, `after_one`, `final`, `error`, `diff`
 and `iters`. Nonfinite approximations from exploratory parameters have infinite
-error. The separate mantissa-only `enre` experiment and the custom-formula
-`frsr_NR()` API have been removed; configurable A/B coefficients remain supported.
+error.
 
 Sampling uses half-open intervals `[x_min, x_max)`. Log-stratified sampling
 selects representable normal float32 values directly; equal magic bounds select
@@ -257,7 +255,6 @@ control parallel execution. Random inputs are generated on the main R thread.
 Bin candidates share samples, and phase candidates share a grid independent of
 candidate order. Bin aggregation uses double precision and fixed reduction order,
 so the same samples and build give identical measurements across thread counts.
-This does not promise bitwise equality across platforms or toolchains.
 
 Search results identify the best tested candidate on the sampled inputs. Exact
 bin-objective ties select the smallest magic integer; phase ties compare J,
