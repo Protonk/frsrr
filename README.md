@@ -32,6 +32,17 @@ can fail to compile with C++20. Install from GitHub using `devtools`:
 devtools::install_github("Protonk/frsrr")
 ```
 
+## Numerical contract
+
+Inputs must convert to positive normal IEEE-754 float32 values; original values
+must not exceed the largest finite float32, `(2 - 2^-23) * 2^127`.
+The input and coefficients round to float32, and each operation of
+`y * (A - ((B * x) * y) * y)` rounds separately without fused multiply-subtract.
+The reference and error measurements use double precision and target the
+float32-rounded input, rather than the original R double. Ordinary rounding
+with gradual underflow is assumed; fast-math and altered rounding modes are
+unsupported.
+
 ## Usage
 
 ```R
@@ -230,32 +241,6 @@ The prediction uses the selected, rounded `A`. The four-step signed errors
 lie near this exact-arithmetic fixed point; the separately
 rounded float32 operations need not settle at an identical relative error
 or a machine fixed point for every input.
-
-## Numerical contract and reproducibility
-
-Inputs must convert to positive normal IEEE-754 float32 values; original values
-must not exceed the largest finite float32, `(2 - 2^-23) * 2^127`.
-The input and coefficients round to float32, and each operation of
-`y * (A - ((B * x) * y) * y)` rounds separately without fused multiply-subtract.
-The reference and error measurements use double precision and target the
-float32-rounded input, rather than the original R double. Ordinary rounding
-with gradual underflow is assumed; fast-math and altered rounding modes are
-unsupported.
-
-Sampling uses half-open intervals `[x_min, x_max)`. Log-stratified sampling
-selects representable normal float32 values directly; equal magic bounds select
-that constant, and reversed magic bounds remain supported.
-
-Use `set.seed()` for sampling and `threads` (or `options(frsrr.threads)`) to
-control parallel execution. Random inputs are generated on the main R thread.
-Bin candidates share samples, and phase candidates share a grid independent of
-candidate order. Bin aggregation uses double precision and fixed reduction order,
-so the same samples and build give identical measurements across thread counts.
-
-Search results identify the best tested candidate on the sampled inputs. Exact
-bin-objective ties select the smallest magic integer; phase ties compare J,
-roughness R, then the smallest magic integer. Candidates with nonfinite
-approximations are excluded. 
 
 ## Our friends the robots
 
