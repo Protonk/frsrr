@@ -242,10 +242,6 @@ float32-rounded input, rather than the original R double. Ordinary rounding
 with gradual underflow is assumed; fast-math and altered rounding modes are
 unsupported.
 
-`detail = TRUE` returns `input`, `initial`, `after_one`, `final`, `error`, `diff`
-and `iters`. Nonfinite approximations from exploratory parameters have infinite
-error.
-
 Sampling uses half-open intervals `[x_min, x_max)`. Log-stratified sampling
 selects representable normal float32 values directly; equal magic bounds select
 that constant, and reversed magic bounds remain supported.
@@ -259,9 +255,7 @@ so the same samples and build give identical measurements across thread counts.
 Search results identify the best tested candidate on the sampled inputs. Exact
 bin-objective ties select the smallest magic integer; phase ties compare J,
 roughness R, then the smallest magic integer. Candidates with nonfinite
-approximations are excluded. Bin results retain their configuration in a
-`settings` attribute (preserved by `saveRDS()`, not CSV); phase results include a
-`settings` component. See the function help for the recorded fields.
+approximations are excluded. 
 
 ## Our friends the robots
 
